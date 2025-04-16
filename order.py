@@ -20,12 +20,12 @@ class Order:
     
     def __init__(self, piece, visualizer, remove_method, virtual=False):
         self.piece = piece
-        self.virtual = virtual
-        self.supports = []
-        self.supported_order = None
         self.visualizer = visualizer
         self._full_remove_method = remove_method
-        self.artist = self.visualizer.make_order_artist(self)
+        self.virtual = virtual
+        
+        self.supports = []
+        self.supported_order = None
     
     def __str__(self):
         pass
@@ -77,6 +77,8 @@ class OrderArtist:
 class HoldOrder(Order):
     def __init__(self, piece, visualizer, remove_method, virtual=False):
         super().__init__(piece, visualizer, remove_method, virtual)
+        
+        self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
@@ -113,19 +115,10 @@ class HoldOrderArtist(OrderArtist):
 
 class MoveOrder(Order):
     def __init__(self, piece, landing_square, visualizer, remove_method, virtual=False):
-        # super().__init__(power, piece, visualizer, remove_method, virtual)
-        self.piece = piece
-        self.starting_square = self.piece.square
+        super().__init__(piece, visualizer, remove_method, virtual)
+        
         self.landing_square = landing_square
-        self.virtual = virtual
-        self._full_remove_method = remove_method
-        
-        self.supported_order = None
-        self.supports = []
-        
         self.chess_path = ChessPath(piece, self.landing_square)
-        
-        self.visualizer = visualizer
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
@@ -196,24 +189,17 @@ class MoveOrderArtist(OrderArtist):
 
 class SupportHoldOrder(Order):
     def __init__(self, piece, supported_square, GM, visualizer, remove_method, virtual=False):
-        # super().__init__(power, piece, visualizer, remove_method, virtual)
-        self.piece = piece
+        super().__init__(piece, visualizer, remove_method, virtual)
+        
         hold_order = GM.find_order_on_square(supported_square, order_code=Order.HOLD)
         if hold_order is None:
             hold_order = GM.make_order_on_square(Order.HOLD, supported_square, virtual=True)
         self.supported_order = hold_order
-        self.supports = []
-        self.virtual = virtual
-        self._full_remove_method = remove_method
-        
         self.chess_path = ChessPath(piece, supported_square)
-        
         self.valid = self.validate()
-        
         if self.valid:
             self.supported_order.add_support(self)
             
-        self.visualizer = visualizer
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
@@ -245,14 +231,12 @@ class SupportHoldOrderArtist(OrderArtist):
         self.patches.append(patch)
 
 class BuildOrder(Order):
-    def __init__(self, power, piece_code, square, visualizer):
+    def __init__(self, power, piece_code, square, visualizer, remove_method, virtual=False):
+        super().__init__(None, visualizer, remove_method, virtual)
         self.power = power
         self.piece_code = piece_code
         self.square = square
-        self.virtual = False
-        self.piece = None
         
-        self.visualizer = visualizer
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
@@ -274,11 +258,9 @@ class BuildOrderArtist(OrderArtist):
         self.patches = [patch] + piece.artist.get_patches()
 
 class DisbandOrder(Order):
-    def __init__(self, piece, visualizer):
-        self.piece = piece
-        self.virtual = False
+    def __init__(self, piece, visualizer, remove_method, virtual=False):
+        super().__init__(piece, visualizer, remove_method, virtual)
         
-        self.visualizer = visualizer
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
