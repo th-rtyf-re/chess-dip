@@ -48,7 +48,6 @@ class Order:
             if self.supported_order is not None:
                 self.supported_order.supports.remove(self)
                 self.supported_order.update()
-            # self.visualizer.erase_order(self)
     
     def update(self):
         if self.virtual and not self.supports:
@@ -90,7 +89,6 @@ class HoldOrder(Order):
     def execute(self, board, console):
         if self.virtual:
             return False
-        # piece = board.get_piece(self.square)
         if self.piece is not None and self.piece.power == self.power:
             console.out(f"{self.power} held {self.piece.square}.")
             return True

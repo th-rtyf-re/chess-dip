@@ -14,7 +14,6 @@ class Visualizer:
         self.fig, self.ax = plt.subplots(1, 1, layout="tight")
         self.board_artist = None
         
-        # self.piece_artists = []
         self.piece_kwargs = {"lw": 2, "capstyle": "butt", "joinstyle": "round"}
         r = .3
         self.piece_radius = {
@@ -27,8 +26,6 @@ class Visualizer:
         
         self.square_artists = np.full((8, 8), None, dtype=object)
         self.sc_artists = np.full((8, 8), None, dtype=object)
-        
-        # self.order_artists = []
     
     def ion(self):
         plt.ion()
@@ -47,11 +44,9 @@ class Visualizer:
         return PieceArtist(self, piece)
     
     def add_piece(self, piece):
-        # self.piece_artists.append(piece.artist)
         piece.artist.add_to_ax(self.ax)
     
     def erase_piece(self, piece):
-        # self.piece_artists.remove(piece.artist)
         piece.artist.remove()
     
     def move_piece(self, piece, square):
@@ -94,9 +89,7 @@ class Visualizer:
             raise ValueError(f"No artist for {order}!")
     
     def add_order(self, order):
-        # self.order_artists.append(order.artist)
         order.artist.add_to_ax(self.ax)
     
     def erase_order(self, order):
         order.artist.remove()
-        # self.order_artists.remove(order.artist)
