@@ -25,27 +25,22 @@ class ChessPath:
         drank = self.land.rank - self.start.rank
         dfile_sign = 1 if dfile >= 0 else -1
         drank_sign = 1 if drank >= 0 else -1
+        file_range = range(self.start.file, self.land.file, dfile_sign)[1:]
+        rank_range = range(self.start.rank, self.land.rank, drank_sign)[1:]
         match self.piece.code:
             case Piece.KING:
                 if abs(dfile) <= 1 and abs(drank) <= 1:
                     return True
             case Piece.ROOK:
                 if dfile == 0:
-                    ranks = range(self.start.rank, self.land.rank, drank_sign)[1:]
-                    self.intermediate_squares = [Square(rank=y, file=self.start.file) for y in ranks]
+                    self.intermediate_squares = [Square(rank=y, file=self.start.file) for y in rank_range]
                     return True
                 elif drank == 0:
-                    files = range(self.start.file, self.land.file, dfile_sign)[1:]
-                    self.intermediate_squares = [Square(rank=self.start.rank, file=x) for x in files]
+                    self.intermediate_squares = [Square(rank=self.start.rank, file=x) for x in file_range]
                     return True
             case Piece.BISHOP:
                 if abs(dfile) == abs(drank):
-                    self.intermediate_squares = [
-                        Square(file=x, rank=y) for x, y in zip(
-                            range(self.start.file + 1, self.land.file, dfile_sign),
-                            range(self.start.rank + 1, self.land.rank, drank_sign)
-                        )
-                    ]
+                    self.intermediate_squares = [Square(file=x, rank=y) for x, y in zip(file_range, rank_range)]
                     return True
             case Piece.KNIGHT:
                 if (abs(drank) == 2 and abs(dfile) == 1) or (abs(dfile) == 2 and abs(drank) == 1):
@@ -95,8 +90,8 @@ class ChessPathArtist:
             x1, y1 = square.file, square.rank
             if abs(x1 - x0) > 1 or abs(y1 - y0) > 1:
                 # if the next square is not adjacent, then we add a connecting path
-                ax, ay = self._closest_corner((x0, y0), (x1, y1))
-                bx, by = self._closest_corner((x1, y1), (x0, y0))
+                ax, ay = self._closest_corner((x0, y0), (x1, y1), clockwise=self.clockwise)
+                bx, by = self._closest_corner((x1, y1), (x0, y0), clockwise=not self.clockwise)
                 connecting_vertices = self._connecting_vertices((ax, ay), (bx, by))
                 vertices.extend(connecting_vertices)
             vertices.append((x1, y1))
@@ -107,8 +102,8 @@ class ChessPathArtist:
             x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
             if abs(x1 - x0) > 1 or abs(y1 - y0) > 1:
                 # if the next square is not adjacent, then we add a connecting path
-                ax, ay = self._closest_corner((x0, y0), (x1, y1))
-                bx, by = self._closest_corner((x1, y1), (x0, y0))
+                ax, ay = self._closest_corner((x0, y0), (x1, y1), clockwise=self.clockwise)
+                bx, by = self._closest_corner((x1, y1), (x0, y0), clockwise=not self.clockwise)
                 connecting_vertices = self._connecting_vertices((ax, ay), (bx, by))
                 vertices.extend(connecting_vertices)
             vertices.append((x1, y1))
@@ -118,7 +113,7 @@ class ChessPathArtist:
             vertices.extend(connecting_vertices)
         return vertices
     
-    def _closest_corner(self, square_center, target):
+    def _closest_corner(self, square_center, target, clockwise=None):
         """
         Find closest corner of current square to the target point.
         Disambiguate using the object's clockwise flag.
@@ -127,13 +122,18 @@ class ChessPathArtist:
         
         L1 and L2 distances are equivalent in this situtation.
         """
+        if clockwise is None:
+            clockwise = self.clockwise
         x0, y0 = square_center
         target = np.asarray(target)
         corners = np.array([(x0 - .5, y0 - .5), (x0 - .5, y0 + .5), (x0 + .5, y0 + .5), (x0 + .5, y0 - .5)])
         dists = np.sum(np.abs(np.subtract(target, corners)), axis=1)
         candidate_idx = (dists == dists.min()).nonzero()[0]
         if len(candidate_idx) > 1 and candidate_idx[1] != candidate_idx[0] + 1:
-            return corners[candidate_idx[1]]
+            if clockwise:
+                return corners[candidate_idx[1]]
+            else:
+                return corners[candidate_idx[0]]
         else:
             return corners[candidate_idx[0]]
     
