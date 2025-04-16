@@ -112,18 +112,18 @@ Finally, a pawn that is on the back rank in the fall phase must be promoted to a
 
 Players write `<order>`s, which are converted into `<true order>`s during order validation. Order syntax is presented below in a sort of Backus-Naur form:
 
-    <order> = \<piece> \<square> \<action> | \<castle order>
+    <order> = <piece> <square> <action> | <castle order>
     <piece> = (empty) | P | N | B | R | K
-    <square> = \<file>\<rank>
+    <square> = <file><rank>
     <file> = a | b | c | d | e | f | g | h
     <rank> = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
-    <action> = H | - \<square> | S \<square> \<direct action> | t \<square> x \<square>
-    <direct action> = H | - \<square> | x \<square> | t \<square> | C \<square> \<convoy code> \<square>
+    <action> = H | - <square> | S <square> <direct action> | t <square> x <square>
+    <direct action> = H | - <square> | x <square> | t <square> | C <square> <convoy code> <square>
     <convoy code> = - | x | t | S
     <castle order> = O-O | O-O-O
      
-    <true order> = \<piece> \<square> \<true action>
-    <true action> = \<direct action> | S \<square> \<direct action>
+    <true order> = <piece> <square> <true action>
+    <true action> = <direct action> | S <square> <direct action>
 
 The `(empty)` piece is used for convoy orders and when omitting the piece name for pawn orders.
 
