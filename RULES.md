@@ -1,6 +1,6 @@
 Chess Dip: Nacho ordinary Diplomacy variant
 
-1. Appetizer
+# Appetizer
 
 Chess Dip is Diplomacy played on a chess board. The mechanics are a balance of Diplomacy rules, chess moves, and interesting strategy. Each side of the board is divided into two powers, named after a classic chess opening or defense. Units are all possible chess pieces except for the queen. Pieces move and support following their chess moves: this includes castling and en passant\! Also, dislodged pieces are automatically disbanded.
 
@@ -8,22 +8,22 @@ The major change is the introduction of multiple-square moves, like those of bis
 
 This multiple-square mechanism prevents pieces from bouncing entire lines of moves, while still giving powers the possibility of quickly bringing pieces to the frontline.
 
-2. Main course: the rules
-    1. Setup
-        1. Board and win condition
+# Main course: the rules
+## Setup
+### Board and win condition
 
-    The map is an 8 by 8 grid of squares called the boarf. Rows are called ranks, labeled 1 through 8; columns are called files, labeled a through h. Thus the squares have names such as a1, h8, and so on.  
+The map is an 8 by 8 grid of squares called the boarf. Rows are called ranks, labeled 1 through 8; columns are called files, labeled a through h. Thus the squares have names such as a1, h8, and so on.  
 There are 29 supply centers; the win condition is owning 15 of them.
 
-      2. Powers
+### Powers
 
 There are four powers: England (quartz), Italy (opal), France (obsidian), and Scandinavia (onyx).
 
-      3. Units
+### Units
 
 The units are called pieces. There are pawns, bishops, knights, rooks, and kings. Note that there are no queens.
 
-      4. Starting positions
+### Starting positions
 
 Each power starts with a king, a pawn, and either a knight or a bishop.
 
