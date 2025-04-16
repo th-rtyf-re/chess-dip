@@ -67,7 +67,6 @@ class GameManager:
         for order in self.orders:
             if ((order_code is None or isinstance(order, self.order_subclasses[order_code]))
                 and order.piece == piece):
-                print(f"found order on {piece.square}: {order}")
                 if virtual is None:
                     return order
                 elif order.virtual == virtual:
@@ -77,18 +76,17 @@ class GameManager:
     def find_order_on_square(self, square, order_code=None, virtual=None):
         piece = self.board.get_piece(square)
         if piece is not None:
-            return self.find_order(piece, virtual)
+            return self.find_order(piece, order_code=order_code, virtual=virtual)
         return None
     
     def make_and_add_order(self, order_code, piece, *args, virtual=False):
-        order = None
         for other_order in self.orders:
             if isinstance(other_order, self.order_subclasses[order_code]) and other_order.is_like(piece, *args):
                 order = other_order
-                order.set_virtual(virtual)
-        if order is None:
-            order = self.order_subclasses[order_code](piece.power, piece, *args, self.visualizer, self.full_remove_order, virtual=virtual)
-            self.add_order(order)
+                order.set_virtual(order.virtual and virtual)
+                return order
+        order = self.order_subclasses[order_code](piece, *args, self.visualizer, self.full_remove_order, virtual=virtual)
+        self.add_order(order)
         return order
     
     def make_order_on_square(self, order_code, square, *args, **kwargs):
@@ -99,7 +97,7 @@ class GameManager:
         return None
     
     def add_order(self, order):
-        for i, other_order in enumerate(self.orders):
+        for other_order in self.orders:
             if other_order.piece == order.piece and not other_order.virtual and not order.virtual:
                 other_order.remove()
                 self.orders.append(order)
@@ -215,7 +213,7 @@ class GameManager:
                     stale = True
                     continue
                 case Order.DISBAND:
-                    self.add_order(DisbandOrder(power, starting_square, self.visualizer))
+                    self.add_order(DisbandOrder(piece, self.visualizer))
                     stale = True
                     continue
                 case None:

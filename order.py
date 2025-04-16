@@ -18,8 +18,7 @@ class Order:
     BUILD = -1
     DISBAND = -2
     
-    def __init__(self, power, piece, visualizer, remove_method, virtual=False):
-        self.power = power
+    def __init__(self, piece, visualizer, remove_method, virtual=False):
         self.piece = piece
         self.virtual = virtual
         self.supports = []
@@ -76,12 +75,12 @@ class OrderArtist:
         pass
 
 class HoldOrder(Order):
-    def __init__(self, power, piece, visualizer, remove_method, virtual=False):
-        super().__init__(power, piece, visualizer, remove_method, virtual)
+    def __init__(self, piece, visualizer, remove_method, virtual=False):
+        super().__init__(piece, visualizer, remove_method, virtual)
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
-        return prefix + f"{self.power}: hold {self.piece}"
+        return prefix + f"{self.piece} hold"
     
     def is_like(self, piece):
         return self.piece == piece
@@ -89,11 +88,8 @@ class HoldOrder(Order):
     def execute(self, board, console):
         if self.virtual:
             return False
-        if self.piece is not None and self.piece.power == self.power:
-            console.out(f"{self.power} held {self.piece.square}.")
-            return True
-        console.out(f"{self.power} failed to hold {self.piece.square}.")
-        return False
+        console.out(f"{self.piece} held.")
+        return True
 
 class HoldOrderArtist(OrderArtist):
     def __init__(self, order):
@@ -107,7 +103,7 @@ class HoldOrderArtist(OrderArtist):
         codes1 = path1.codes
         path = Path.make_compound_path(path0, Path(vertices1, codes1))
         linestyle = ":" if order.virtual else "-"
-        patch = mpl.patches.PathPatch(path, fc=order.power.square_color[0], ec="k", lw=1.5, ls=linestyle)
+        patch = mpl.patches.PathPatch(path, fc=order.piece.power.square_color[0], ec="k", lw=1.5, ls=linestyle)
         self.patches = [patch]
     
     def set_virtual(self, virtual):
@@ -116,9 +112,8 @@ class HoldOrderArtist(OrderArtist):
             patch.set_linestyle(linestyle)
 
 class MoveOrder(Order):
-    def __init__(self, power, piece, landing_square, visualizer, remove_method, virtual=False):
+    def __init__(self, piece, landing_square, visualizer, remove_method, virtual=False):
         # super().__init__(power, piece, visualizer, remove_method, virtual)
-        self.power = power
         self.piece = piece
         self.starting_square = self.piece.square
         self.landing_square = landing_square
@@ -134,25 +129,22 @@ class MoveOrder(Order):
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
-        return f"{self.power}: move {self.starting_square} to {self.landing_square}"
+        return f"{self.piece} move to {self.landing_square}"
     
     def is_like(self, piece, landing_square):
         return self.piece == piece and self.landing_square == landing_square
     
     def execute(self, board, console):
-        if self.piece.power == self.power:
-            if not self.chess_path.valid:
-                console.out(f"{self.power} invalid move: {self.starting_square} to {self.landing_square}.")
-                return False
-            other_piece = board.get_piece(self.landing_square)
-            if other_piece is not None:
-                board.remove_piece(other_piece)
-            board.move_piece_to(self.piece, self.landing_square)
-            board.set_ownership(self.landing_square, self.power)
-            console.out(f"{self.power} moved {self.starting_square} to {self.landing_square}.")
-            return True
-        console.out(f"{self.power} failed to move {self.starting_square} to {self.landing_square}.")
-        return False
+        if not self.chess_path.valid:
+            console.out(f"{self.piece} cannot move to {self.landing_square}.")
+            return False
+        other_piece = board.get_piece(self.landing_square)
+        if other_piece is not None:
+            board.remove_piece(other_piece)
+        board.move_piece_to(self.piece, self.landing_square)
+        board.set_ownership(self.landing_square, self.piece.power)
+        console.out(f"{self.piece} moved to {self.landing_square}.")
+        return True
 
 def move_path(start, end, width=.1, head_width=.3, alpha=45, shrink=0):
     x0, y0 = start
@@ -199,13 +191,12 @@ class MoveOrderArtist(OrderArtist):
         self.patches = []
         patch = mpl.patches.PathPatch(arrow_path, ec="k", lw=4, **kwargs)
         self.patches.append(patch)
-        patch = mpl.patches.PathPatch(arrow_path, ec=order.power.square_color[0], lw=2, **kwargs)
+        patch = mpl.patches.PathPatch(arrow_path, ec=order.piece.power.square_color[0], lw=2, **kwargs)
         self.patches.append(patch)
 
 class SupportHoldOrder(Order):
-    def __init__(self, power, piece, supported_square, GM, visualizer, remove_method, virtual=False):
+    def __init__(self, piece, supported_square, GM, visualizer, remove_method, virtual=False):
         # super().__init__(power, piece, visualizer, remove_method, virtual)
-        self.power = power
         self.piece = piece
         hold_order = GM.find_order_on_square(supported_square, order_code=Order.HOLD)
         if hold_order is None:
@@ -226,7 +217,7 @@ class SupportHoldOrder(Order):
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
-        return f"{self.power}: {self.piece} support order {self.supported_order}"
+        return f"{self.piece} support {self.supported_order}"
     
     def is_like(self, piece, supported_square):
         return self.piece == piece and self.supported_square == supported_square
@@ -238,9 +229,9 @@ class SupportHoldOrder(Order):
     
     def execute(self, board, console):
         if not self.valid:
-            console.out(f"{self.power} invalid move: {self.piece.square} support {self.supported_order}.")
+            console.out(f"{self.piece} cannot support {self.supported_order}.")
             return False
-        console.out(f"{self.power} supported {self.supported_order}.")
+        console.out(f"{self.piece} supported {self.supported_order}.")
         return True
 
 class SupportHoldOrderArtist(OrderArtist):
@@ -250,7 +241,7 @@ class SupportHoldOrderArtist(OrderArtist):
         self.patches = []
         patch = mpl.patches.PathPatch(path, ec="k", lw=4, **kwargs)
         self.patches.append(patch)
-        patch = mpl.patches.PathPatch(path, ec=order.power.square_color[0], lw=2, **kwargs)
+        patch = mpl.patches.PathPatch(path, ec=order.piece.power.square_color[0], lw=2, **kwargs)
         self.patches.append(patch)
 
 class BuildOrder(Order):
@@ -258,12 +249,15 @@ class BuildOrder(Order):
         self.power = power
         self.piece_code = piece_code
         self.square = square
+        self.virtual = False
+        self.piece = None
         
         self.visualizer = visualizer
         self.artist = self.visualizer.make_order_artist(self)
     
-    def get_starting_square(self):
-        return self.square
+    def __str__(self):
+        names = ["Pawn", "Knight", "Bishop", "Rook", "King"]
+        return f"{self.power} build {names[self.piece_code]} on {self.square}"
     
     def execute(self, board, console):
         board.vacate_square(self.square)
@@ -273,36 +267,32 @@ class BuildOrder(Order):
 
 class BuildOrderArtist(OrderArtist):
     def __init__(self, order):
-        square = order.get_starting_square()
+        square = order.square
         rank, file = square.rank, square.file
         patch = mpl.patches.Circle((square.file, square.rank), radius=.45, fc="none", ec="k", ls=":", lw=1, capstyle="butt")
         piece = Piece(order.piece_code, order.power, order.square, order.visualizer)
         self.patches = [patch] + piece.artist.get_patches()
 
 class DisbandOrder(Order):
-    def __init__(self, power, square, visualizer):
-        self.power = power
-        self.square = square
+    def __init__(self, piece, visualizer):
+        self.piece = piece
+        self.virtual = False
         
         self.visualizer = visualizer
         self.artist = self.visualizer.make_order_artist(self)
     
-    def get_starting_square(self):
-        return self.square
+    def __str__(self):
+        return f"{self.piece} disband"
     
     def execute(self, board, console):
-        piece = board.get_piece(self.square)
-        if piece is not None and piece.power == self.power:
-            board.remove_piece(piece)
-            console.out(f"{self.power} disbanded {self.square}.")
-            return True
-        console.out(f"{self.power} failed to disband {self.square}.")
-        return False
+        board.remove_piece(self.piece)
+        console.out(f"{self.piece} disbanded.")
+        return True
 
 class DisbandOrderArtist(OrderArtist):
     def __init__(self, order):
         self.patches = []
-        square = order.get_starting_square()
+        square = order.piece.square
         rank, file = square.rank, square.file
         w = .45
         x0, x1 = square.file - w, square.file + w
