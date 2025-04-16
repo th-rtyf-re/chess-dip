@@ -1,4 +1,4 @@
-# Chess dip: a Diplomacy variant on a chess board
+# Chess Dip: a Diplomacy variant on a chess board
 
 This Diplomacy variant was created for the DiploStrats Diplomacy variant
 design contest. This repository contains a Python implementation of the
