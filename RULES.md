@@ -8,11 +8,11 @@ The major change is the introduction of multiple-square moves, like those of bis
 
 This multiple-square mechanism prevents pieces from bouncing entire lines of moves, while still giving powers the possibility of quickly bringing pieces to the frontline.
 
-2. Main course: the rules  
-   1. Setup  
-      1. Board and win condition
+2. Main course: the rules
+    1. Setup
+        1. Board and win condition
 
-The map is an 8 by 8 grid of squares called the boarf. Rows are called ranks, labeled 1 through 8; columns are called files, labeled a through h. Thus the squares have names such as a1, h8, and so on.  
+    The map is an 8 by 8 grid of squares called the boarf. Rows are called ranks, labeled 1 through 8; columns are called files, labeled a through h. Thus the squares have names such as a1, h8, and so on.  
 There are 29 supply centers; the win condition is owning 15 of them.
 
       2. Powers
@@ -114,18 +114,18 @@ Finally, a pawn that is on the back rank in the fall phase must be promoted to a
 
 Players write `<order>`s, which are converted into `<true order>`s during order validation. Order syntax is presented below in a sort of Backus-Naur form:
 
-   <order> = <piece> <square> <action> | <castle order>
-   <piece> = (empty) | P | N | B | R | K
-   <square> = <file><rank>
-   <file> = a | b | c | d | e | f | g | h
-   <rank> = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
-   <action> = H | - <square> | S <square> <direct action> | t <square> x <square>
-   <direct action> = H | - <square> | x <square> | t <square> | C <square> <convoy code> <square>
-   <convoy code> = - | x | t | S
-   <castle order> = O-O | O-O-O
+   `<order> = <piece> <square> <action> | <castle order>`
+   `<piece> = (empty) | P | N | B | R | K`
+   `<square> = <file><rank>`
+   `<file> = a | b | c | d | e | f | g | h`
+   `<rank> = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8`
+   `<action> = H | - <square> | S <square> <direct action> | t <square> x <square>`
+   `<direct action> = H | - <square> | x <square> | t <square> | C <square> <convoy code> <square>`
+   `<convoy code> = - | x | t | S`
+   `<castle order> = O-O | O-O-O`
    
-   <true order> = <piece> <square> <true action>
-   <true action> = <direct action> | S <square> <direct action>
+   `<true order> = <piece> <square> <true action>`
+   `<true action> = <direct action> | S <square> <direct action>`
 
 The `(empty)` piece is used for convoy orders and when omitting the piece name for pawn orders.
 
