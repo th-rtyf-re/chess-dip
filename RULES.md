@@ -1,5 +1,3 @@
-Chess Dip: Nacho ordinary Diplomacy variant
-
 # Appetizer
 
 Chess Dip is Diplomacy played on a chess board. The mechanics are a balance of Diplomacy rules, chess moves, and interesting strategy. Each side of the board is divided into two powers, named after a classic chess opening or defense. Units are all possible chess pieces except for the queen. Pieces move and support following their chess moves: this includes castling and en passant\! Also, dislodged pieces are automatically disbanded.
@@ -27,17 +25,17 @@ The units are called pieces. There are pawns, bishops, knights, rooks, and kings
 
 Each power starts with a king, a pawn, and either a knight or a bishop.
 
-      5. Game structure
+### Game structure
 
 The game plays out like in standard Diplomacy: there are two seasons and a build phase every year.
 
 The next sections progressively introduce pieces and mechanisms.
 
-   2. Kings and knights: a standard variant
+## Kings and knights: a standard variant
 
 Kings and knights move as they do in chess on an empty board; see the variant Chesspolitik. Their supports follow the same paths, and adjudication follows standard Diplomacy rules. Note that kings may move “into check” and hold while “under check”.
 
-      1. Orders
+### Orders
 
 Here are some examples of orders:  
 move: `K e1 - e2`  
@@ -45,19 +43,19 @@ hold: `K d1 H`
 support-move: `N g1 S e1 - e2`  
 support-hold: `N c3 S d1 H`
 
-      2. Dislodges
+### Dislodges
 
 Dislodged pieces are automatically disbanded. We slightly modify the definition of dislodging for reasons that will be clear when pawns are introduced: a piece is dislodged when it does not or fails to move, and there is a successful attack landing on the piece’s square.
 
-      3. Builds
+### Builds
 
 Powers may build on any home center that they own. Home centers are the ones on the first two ranks on their side of the board: ranks 1 and 2 for England and Italy, and ranks 7 and 8 for France and Scandinavia. Some home centers can change ownership; this will be explained when pawns are introduced.
 
-   3. Bishops and rooks: multiple-square orders
+## Bishops and rooks: multiple-square orders
 
 Bishops and rooks move as they do in chess; their supports follow the same paths. These paths have a starting square, a landing square, and potential intermediate squares, these last squares being those between the starting and landing square, on the same rank, file, or diagonal.
 
-      1. Multiple-square orders
+### Multiple-square orders
 
 A multiple-square order automatically issues a convoy order on each of its intermediate squares: such an order looks like  
 `e2 C f1 - c4`.  
@@ -67,28 +65,28 @@ The convoy strength of a convoy order is the number of successful support-convoy
 
 When adjudicating, multiple-square orders are treated like standard orders at their landing squares. So they can bounce, dislodge, etc.
 
-      2. Castling
+### Castling
 
 There is one exception to these multiple-square orders: castling. Castling is only allowed for a king and rook on the first rank on the power’s side, with the king on the square where the power originally had a king (file d or e), and the rook in the corner. For England and Scandinavia, the moves are mirrored to what they would be on a standard chess board (ie king’s side and queen’s side castling are flipped). The two pieces must also have not successfully moved before: for instance, one may castle right after building a king and a rook. The king’s move has no intermediate square but the rook move does: the squares between its starting and landing squares except for the one where the king lands. Castling pieces have attack and defend strength 0, but succeed against empty squares. In other words, they cannot dislodge a piece: this is an example of a travel order, a new type of order that will be detailed in the pawn section. Castling is ordered with a special order:  
 `O-O` or `O-O-O`,  
 corresponding to castling where the rook moves two or three squares, respectively. A castling order succeeds when both travel orders succeed.
 
-   4. Pawns: all the exceptions
+## Pawns: all the exceptions
 
 Pawns travel forwards but attack diagonally. When on the first two ranks of their side, they can also advance two blocks, with an intermediate square: this rule is taken from horde chess.
 
-      1. Travel and attack orders
+### Travel and attack orders
 
 This unique behavior means that pawn orders are more complicated than for other pieces. We introduce a distinction between two types of move orders: travel orders and attack orders. Attack orders are the usual orders, and unless otherwise specified, move orders are attack orders. Travel orders have 0 attack and defend strength, but succeed against empty squares, and otherwise act like attack orders: they can be supported, bounced, etc. Move orders are by default attack orders.
 
 Pawns may only be ordered to travel forwards and attack or support diagonally, except for en passant; see below. Travel orders are ordered like move orders, and with pawn orders we typically omit the piece name:  
 `e2 - e4` or `P e2 - e4`.
 
-      2. Pawn attacks
+### Pawn attacks
 
 An attacking pawn only moves if it successfully dislodges a piece. So a pawn attack can succeed, say by preventing another piece from landing on the attacked square, but the pawn itself will not move. This is also relevant when attacking multiple-square moves: pawns can tap the intermediate squares but will not move there.
 
-      3. En passant
+### En passant
 
 Pawns can also attack en passant, not only against pawns moving in the opposite direction, but also opponent pawns moving in the same direction. For en passant to be possible, the following conditions must hold:
 
@@ -105,12 +103,12 @@ The attack and travel orders may be supported separately. For example, with the 
 `e7 S e5 t d6`  
 both support the en passant move. An en passant move succeeds when both the travel order and the attack order succeed. Note that a successful en passant order dislodges the passed pawn without actually occupying its square.
 
-      4. Pawn promotion
+### Pawn promotion
 
 Finally, a pawn that is on the back rank in the fall phase must be promoted to a knight, bishop, or rook in the build phase. Moreover, if the pawn is on a supply center, then this supply center becomes a home center of the pawn’s power. Build and disband syntax is the same as in standard Diplomacy.
 
-3. Dessert: an axiomatic approach
-   1. Order syntax
+# Dessert: an axiomatic approach
+## Order syntax
 
 Players write `<order>`s, which are converted into `<true order>`s during order validation. Order syntax is presented below in a sort of Backus-Naur form:
 
@@ -129,11 +127,11 @@ Players write `<order>`s, which are converted into `<true order>`s during order 
 
 The `(empty)` piece is used for convoy orders and when omitting the piece name for pawn orders.
 
-   2. Special square names
+## Special square names
 
 Each power begins with a king. The square that this king begins on is called the power’s king square. The square on the same rank and in file d or e adjacent to this square is called the power’s queen square. The squares on the same rank are then named after the closer of these two squares and the non-pawn piece that begins there in standard chess: we get the king/queen knight/bishop/rook squares.
 
-   3. Order validation
+## Order validation
 
 Consider an `<order>` submitted by a power.
 First consider the case where the order is `<piece> <square> <action>`.
@@ -158,24 +156,24 @@ If the order is `O-O-O`, there is a king on the power’s king square that has n
 and these orders are validated.
 In all other cases, the order is invalidated.
 
-      1. Attack and travel orders
+### Attack and travel orders
 
 Powers order move orders. All move orders are attack orders EXCEPT for advancing pawns forwards and castling, which are travel orders.
 
-      2. Implicit convoy orders
+### Implicit convoy orders
 
 For bishop orders, rook orders, two-square pawn orders, and rook castling orders, there may be squares between the starting and landing square of the order on the same rank, file, or diagonal. These squares are called intermediate squares EXCEPT for the square where the castling king lands, for a rook castling order. If the order is `<piece> <square0> <convoy action code> <square1> .*` and `<square2>` is an intermediate square, then we add the order  
 `<square 2> C <square0> <convoy action code> <square1>`.
 
-   4. Dislodges
+## Dislodges
 
 A piece is dislodged if it stays on its square and an attack order on its square succeeds.
 
-   5. Path
+## Path
 
 The path of a move or support order is successful if there are no intermediate squares or if the convoy order of each intermediate square is successful. The path fails otherwise.
 
-   6. Strength computation
+## Strength computation
 
 Squares have a hold strength.
 Attack and travel orders have an attack strength, a defend strength, and a prevent strength.  
@@ -183,13 +181,13 @@ Convoy orders have a prevent strength and a convoy strength.
 
 A head-to-head battle is a pair of move orders from different powers where the starting square of one order is the landing square of the other, and vice-versa. Note that head-to-head battles cannot involve intermediate squares: due to the way pieces move, any such intermediate square would receive multiple convoy orders, making at least one of the two moves fail immediately.
 
-      1. Hold strength
+### Hold strength
 
 The hold strength is 0 for a square that is empty, or that contains a unit that successfully vacates the square.
 It is 1 when the square contains a piece that has an unsuccessful move order.  
 In all other cases, it is 1 plus the number of successful support-hold orders.
 
-      2. Attack strength
+### Attack strength
 
 If the path of the attack order fails, then the attack strength of the attack order is 0\.  
 Otherwise, if the landing square is empty, or if there is no head-to-head battle and the piece on the landing square successfully vacates the square, then the attack strength is:
@@ -202,13 +200,13 @@ Otherwise, the attack strength is 1 plus the number of successful support-move o
 
 The attack strength of a travel order is ½. This is to allow traveling to an empty square.
 
-      3. Defend strength
+### Defend strength
 
 The defend strength of an attack order is 1 plus the number of successful support-move orders.
 
 The defend strength of a travel order is 0\.
 
-      4. Prevent strength
+### Prevent strength
 
 If the path of a move order fails, then the prevent strength of the move order is 0\.
 If the move order is part of a head-to-head battle and the move order of the opposing piece is successful, then the prevent strength is 0\.
@@ -217,12 +215,12 @@ Otherwise, the prevent strength is 1 plus the number of successful support-move 
 If a convoy order fails, then its prevent strength is 0\.
 Otherwise, its prevent strength is the number of successful support-convoy orders.
 
-      5. Convoy strength
+### Convoy strength
 
 The convoy strength of a convoy order is the number of successful support-convoy orders.
 
-   7. Order success
-      1. Convoy orders
+## Order success
+### Convoy orders
 
 A convoy order succeeds if the following conditions are satisfied:
 
@@ -232,7 +230,7 @@ A convoy order succeeds if the following conditions are satisfied:
 
 Otherwise, it fails.
 
-      2. Support orders
+### Support orders
 
 A support order fails when the piece is dislodged, its path fails, or when another piece is ordered to attack the square of the supporting piece and the following conditions are satisfied:
 
@@ -242,21 +240,21 @@ A support order fails when the piece is dislodged, its path fails, or when anoth
 
 Otherwise, it succeeds.
 
-      3. Move orders
+### Move orders
 
 In case of a head-to-head battle, a move order succeeds if its attack strength is larger than the defend strength of the opposing piece and larger than the prevent strength of any piece moving to the same square. Otherwise, it fails.
 
 In case of no head-to-head battle, a move order succeeds if its attack strength is larger than the hold strength of the landing square and larger than the prevent strength of any piece moving to the same square. Otherwise, it fails.
 
-      4. Exceptions
+### Exceptions
 
 Coupled orders fail as soon as one of the two orders fails (for a reason other than the other order failing). This only applies to en passant orders and castling orders.
 
-   8. Moving pieces
+### Moving pieces
 
 Pieces whose move order is successful are moved to the landing square of the move order (or travel order when different from the attack order).
 
-   9. Paradoxes
+### Paradoxes
 
 A paradox is a set of orders with an ambiguous resolution, i.e. several solutions are possible.
 
