@@ -70,16 +70,20 @@ class ChessPathArtist:
         self.clockwise = clockwise
         
         # self.squares = [chess_path.starting_square] + chess_path.intermediate_squares + [chess_path.landing_square]
+    
+    def compute_path(self, support=None, shrink=0):
         if self.chess_path.valid:
-            vertices = self.compute_vertices(support=support)
+            vertices = self.compute_vertices(support=support, shrink=shrink)
             codes = [Path.MOVETO] + (len(vertices) - 1) * [Path.LINETO]
-            self.path = Path(vertices, codes)
+            path = Path(vertices, codes)
         else:
             x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
             x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
-            self.path = Path([(x0, y0), (x1, y1)], [Path.MOVETO, Path.LINETO])
+            last_vertex = self._shrink_line((x0, y0), (x1, y1), shrink)
+            path = Path([(x0, y0), last_vertex], [Path.MOVETO, Path.LINETO])
+        return path
     
-    def compute_vertices(self, support=None):
+    def compute_vertices(self, support=None, shrink=0):
         """
         `support` is the location of the supported order's intersection with
         the landing square.
@@ -106,7 +110,8 @@ class ChessPathArtist:
                 bx, by = self._closest_corner((x1, y1), (x0, y0), clockwise=not self.clockwise)
                 connecting_vertices = self._connecting_vertices((ax, ay), (bx, by))
                 vertices.extend(connecting_vertices)
-            vertices.append((x1, y1))
+            last_vertex = self._shrink_line(vertices[-1], (x1, y1), shrink)
+            vertices.append(last_vertex)
         else:
             ax, ay = self._closest_corner((x0, y0), support)
             connecting_vertices = self._connecting_vertices((ax, ay), support)
@@ -168,5 +173,10 @@ class ChessPathArtist:
             vertices.extend([(bx, ay + k) for k in range(0, int(by - ay), y_sign)])
         vertices.append((bx, by))
         return vertices
-            
+    
+    def _shrink_line(self, start, end, shrink):
+        v_prev = np.asarray(start)
+        v_next = np.asarray(end)
+        direction = (v_next - v_prev) / np.linalg.norm(v_next - v_prev)
+        return tuple(v_next - shrink * direction)
         

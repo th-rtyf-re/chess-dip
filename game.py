@@ -89,6 +89,15 @@ class GameManager:
         self.add_order(order)
         return order
     
+    
+    def make_and_add_support_order(self, order_code, piece, supported_square, *args, virtual=False):
+        supported_order_code = Order.support_order_codes[order_code]
+        supported_order = self.find_order_on_square(supported_square, order_code=supported_order_code)
+        if supported_order is None:
+            supported_order = self.make_order_on_square(supported_order_code, supported_square, *args, virtual=True)
+        order = self.make_and_add_order(order_code, piece, supported_order, *args, virtual=False)
+        return order
+    
     def make_order_on_square(self, order_code, square, *args, **kwargs):
         piece = self.board.get_piece(square)
         if piece is not None:
@@ -203,7 +212,7 @@ class GameManager:
                     continue
                 case Order.SUPPORT_HOLD:
                     supported_square = self._square(args[1])
-                    self.make_and_add_order(order_code, piece, supported_square, self)
+                    self.make_and_add_support_order(order_code, piece, supported_square)
                     stale = True
                     continue
                 case Order.BUILD:
