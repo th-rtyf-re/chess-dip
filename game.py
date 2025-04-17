@@ -37,10 +37,10 @@ class GameManager:
         self.order_subclasses = {
             Order.HOLD: HoldOrder,
             Order.MOVE: MoveOrder,
-            Order.CONVOY: None,
+            Order.CONVOY: ConvoyOrder,
             Order.SUPPORT_HOLD: SupportHoldOrder,
-            Order.SUPPORT_MOVE: None,
-            Order.SUPPORT_CONVOY: None,
+            Order.SUPPORT_MOVE: SupportMoveOrder,
+            Order.SUPPORT_CONVOY: SupportConvoyOrder,
             Order.BUILD: BuildOrder,
             Order.DISBAND: DisbandOrder
         }
@@ -95,7 +95,8 @@ class GameManager:
         supported_order = self.find_order_on_square(supported_square, order_code=supported_order_code)
         if supported_order is None:
             supported_order = self.make_order_on_square(supported_order_code, supported_square, *args, virtual=True)
-        order = self.make_and_add_order(order_code, piece, supported_order, *args, virtual=False)
+        order = self.make_and_add_order(order_code, piece, supported_order, virtual=False)
+        supported_order.add_support(order)
         return order
     
     def make_order_on_square(self, order_code, square, *args, **kwargs):
@@ -215,14 +216,20 @@ class GameManager:
                     self.make_and_add_support_order(order_code, piece, supported_square)
                     stale = True
                     continue
+                case Order.SUPPORT_MOVE:
+                    supported_square = self._square(args[1])
+                    supported_landing_square = self._square(args[3])
+                    self.make_and_add_support_order(order_code, piece, supported_square, supported_landing_square)
+                    stale = True
+                    continue
                 case Order.BUILD:
                     piece_chr = args[1].upper() if args[1] else "P"
                     piece_code = Piece.piece_dict[piece_chr]
-                    self.add_order(BuildOrder(power, piece_code, starting_square, self.visualizer))
+                    self.add_order(BuildOrder(power, piece_code, starting_square, self.visualizer, self.full_remove_order))
                     stale = True
                     continue
                 case Order.DISBAND:
-                    self.add_order(DisbandOrder(piece, self.visualizer))
+                    self.add_order(DisbandOrder(piece, self.visualizer, self.full_remove_order))
                     stale = True
                     continue
                 case None:

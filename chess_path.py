@@ -62,7 +62,7 @@ class ChessPath:
     
 
 class ChessPathArtist:
-    def __init__(self, chess_path, support=None, clockwise=True):
+    def __init__(self, chess_path, clockwise=True):
         """
         clockwise: choose clockwise path over counter-clockwise when ambiguity
         """
@@ -157,20 +157,20 @@ class ChessPathArtist:
         vertices = []
         if in_horiz_edge:
             # do y first
-            vertices.extend([(ax, ay + k) for k in range(0, int(by - ay), y_sign)])
-            vertices.extend([(ax + k, by) for k in range(0, int(bx - ax), x_sign)])
+            vertices.extend([(ax, ay + k) for k in range(0, int(by - ay + y_sign), y_sign)])
+            vertices.extend([(ax + k, by) for k in range(0, int(bx - ax + x_sign), x_sign)])
         elif in_vert_edge:
             # do x first
-            vertices.extend([(ax + k, ay) for k in range(0, int(bx - ax), x_sign)])
-            vertices.extend([(bx, ay + k) for k in range(0, int(by - ay), y_sign)])
+            vertices.extend([(ax + k, ay) for k in range(0, int(bx - ax + x_sign), x_sign)])
+            vertices.extend([(bx, ay + k) for k in range(0, int(by - ay + y_sign), y_sign)])
         elif (self.clockwise and x_sign == y_sign) or (not self.clockwise and x_sign != y_sign):
             # do y first
-            vertices.extend([(ax, ay + k) for k in range(0, int(by - ay), y_sign)])
-            vertices.extend([(ax + k, by) for k in range(0, int(bx - ax), x_sign)])
+            vertices.extend([(ax, ay + k) for k in range(0, int(by - ay + y_sign), y_sign)])
+            vertices.extend([(ax + k, by) for k in range(0, int(bx - ax + x_sign), x_sign)])
         else:
             # do x first
-            vertices.extend([(ax + k, ay) for k in range(0, int(bx - ax), x_sign)])
-            vertices.extend([(bx, ay + k) for k in range(0, int(by - ay), y_sign)])
+            vertices.extend([(ax + k, ay) for k in range(0, int(bx - ax + x_sign), x_sign)])
+            vertices.extend([(bx, ay + k) for k in range(0, int(by - ay + y_sign), y_sign)])
         vertices.append((bx, by))
         return vertices
     

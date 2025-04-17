@@ -55,9 +55,10 @@ Bishops and rooks move as they do in chess; their supports follow the same paths
 
 ### Multiple-square orders
 
-A multiple-square order automatically issues a convoy order on each of its intermediate squares: such an order looks like  
-`e2 C f1 - c4`.  
-Note that this order applies to the square, not any specific piece on the square. Also note that a square can receive multiple convoy orders. Powers cannot explicitly order such moves, but they can support them with a new type of support, the support-convoy. Such an order looks like  
+A multiple-square order automatically issues a **convoy** order on each of its intermediate squares: such an order looks like  
+`e2 C f1 - c4`, or  
+`e2 C f1 S c4`,
+where in the second example `c4` is the *landing square* of the support order from `f1`. Note that convoys are ordered to squares, not pieces. Also note that a square may receive multiple convoy orders. Powers may not explicitly order such moves, but they may support them with a new type of support, the **support-convoy**. Such an order looks like  
 `K e1 S e2 C f1 - c4`.  
 The convoy strength of a convoy order is the number of successful support-convoys that it receives. A convoy order fails if its convoy strength is less than that of another convoy order on the same square. A convoy order also fails if a move order onto its square succeeds, this success being determined by interpreting the convoy strength as a prevent strength.
 

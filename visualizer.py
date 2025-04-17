@@ -85,6 +85,8 @@ class Visualizer:
             return DisbandOrderArtist(order)
         elif isinstance(order, SupportHoldOrder):
             return SupportHoldOrderArtist(order)
+        elif isinstance(order, SupportMoveOrder):
+            return SupportMoveOrderArtist(order)
         else:
             raise ValueError(f"No artist for {order}!")
     
@@ -93,3 +95,8 @@ class Visualizer:
     
     def erase_order(self, order):
         order.artist.remove()
+    
+    def add_support(self, order, support_order):
+        new_patches = order.artist.add_support(support_order)
+        for patch in new_patches:
+            self.ax.add_patch(patch)

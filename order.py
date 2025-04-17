@@ -51,7 +51,7 @@ class Order:
         elif not self.supports: # full removal
             self._full_remove_method(self)
             if self.supported_order is not None:
-                self.supported_order.supports.remove(self)
+                self.supported_order.remove_support(self)
                 self.supported_order.update()
     
     def update(self):
@@ -64,21 +64,38 @@ class Order:
     
     def add_support(self, support_order):
         self.supports.append(support_order)
+        self.visualizer.add_support(self, support_order)
+    
+    def remove_support(self, support_order):
+        self.supports.remove(support_order)
+        self.artist.remove_support(support_order)
 
 class OrderArtist:
     def __init__(self, order):
         self.patches = []
+        self.support_patches = {}
     
     def add_to_ax(self, ax):
         for patch in self.patches:
-            ax.add_artist(patch)
+            ax.add_patch(patch)
+        for patches in self.support_patches.values():
+            for patch in patches:
+                ax.add_patch(patch)
 
     def remove(self):
         for patch in self.patches:
             patch.remove()
+        for patches in self.support_patches.values():
+            for patch in patches:
+                patch.remove()
     
     def set_virtual(self, virtual):
         pass
+    
+    def remove_support(self, support_order):
+        for patch in self.support_patches[support_order]:
+            patch.remove()
+        del self.support_patches[support_order]
 
 class HoldOrder(Order):
     def __init__(self, piece, visualizer, remove_method, virtual=False):
@@ -101,26 +118,31 @@ class HoldOrder(Order):
 
 class HoldOrderArtist(OrderArtist):
     def __init__(self, order):
+        super().__init__(order)
+        
         self.radius = .4
-        width = .1
+        self.width = .1
         center = order.piece.square.file, order.piece.square.rank
-        path0 = Path.circle(center, radius=self.radius - width / 2)
-        path1 = Path.circle(center, radius=self.radius + width / 2)
+        path0 = Path.circle(center, radius=self.radius - self.width / 2)
+        path1 = Path.circle(center, radius=self.radius + self.width / 2)
         vertices1 = path1.vertices
         vertices1[:, 0] = 2 * center[0] - vertices1[:, 0]
         codes1 = path1.codes
         path = Path.make_compound_path(path0, Path(vertices1, codes1))
         linestyle = ":" if order.virtual else "-"
-        patch = mpl.patches.PathPatch(path, fc=order.piece.power.square_color[0], ec="k", lw=1.5, ls=linestyle)
-        self.patches = [patch]
+        patch = mpl.patches.PathPatch(path, fc=order.piece.power.square_color[0], ec="k", lw=1.5, ls=linestyle, joinstyle="round", capstyle="round")
+        self.patches.append(patch)
     
     def set_virtual(self, virtual):
         linestyle = ":" if virtual else "-"
         for patch in self.patches:
             patch.set_linestyle(linestyle)
     
-    def get_junction(self, support_order):
-        pass
+    def add_support(self, support_order):
+        junction = support_order.artist.path.vertices[-1]
+        patch = mpl.patches.Circle(junction, radius=self.width, fc="w", ec="k", lw=1.5)
+        self.support_patches[support_order] = [patch]
+        return self.support_patches[support_order]
 
 class MoveOrder(Order):
     def __init__(self, piece, landing_square, visualizer, remove_method, virtual=False):
@@ -148,60 +170,50 @@ class MoveOrder(Order):
         console.out(f"{self.piece} moved to {self.landing_square}.")
         return True
 
-def move_path(start, end, width=.1, head_width=.3, alpha=45, shrink=0):
-    x0, y0 = start
-    x1, y1 = end
-    vec = np.array([x1 - x0, y1 - y0], dtype=float)
-    dist = np.linalg.norm(vec)
-    direction = vec / dist
-    
-    # draw arrow going up
-    ax, ay = 0, shrink
-    bx, by = 0, dist - shrink
-    w = width
-    hw = head_width
-    
-    angle = np.deg2rad(alpha)
-    r = w / 2
-    hr = hw / 2
-    hh = w / np.sin(angle)# head height
-    z = by - hh
-    
-    left_vertices = [
-        (-r, ay),
-        (-r, z - r / np.tan(angle)),
-        (-hw / 2, z - hr / np.tan(angle)),
-        (-hw / 2, by - hr / np.tan(angle)),
-    ]
-    right_vertices = [(-x, y) for x, y in left_vertices[::-1]]
-    vertices = np.array(left_vertices + [(ax, by)] + right_vertices + [(- r, ay)])
-    rot = np.array([[direction[1], direction[0]], [-direction[0], direction[1]]])
-    v0 = np.array([x0, y0])
-    for i in range(len(vertices)):
-        vertices[i] = v0 + rot @ vertices[i]
-    codes = [Path.MOVETO] + (len(vertices) - 2) * [Path.LINETO] + [Path.CLOSEPOLY]
-    path = Path(vertices, codes)
-    return path
-
 class MoveOrderArtist(OrderArtist):
     def __init__(self, order):
-        path = order.chess_path.artist.compute_path()
+        super().__init__(order)
+        
+        self.width = .1
+        self.path = order.chess_path.artist.compute_path()
         arrow_style = mpl.patches.ArrowStyle("->", head_length=.2)
-        arrow_paths, _ = arrow_style.transmute(path, mutation_size=1, linewidth=0)
+        arrow_paths, _ = arrow_style.transmute(self.path, mutation_size=1, linewidth=0)
         arrow_path = Path.make_compound_path(*arrow_paths)
-        kwargs = dict(fc="none", joinstyle="round", capstyle="round")
-        self.patches = []
+        linestyle = ":" if order.virtual else "-"
+        kwargs = dict(fc="none", ls=linestyle, joinstyle="round", capstyle="round")
         patch = mpl.patches.PathPatch(arrow_path, ec="k", lw=4, **kwargs)
         self.patches.append(patch)
         patch = mpl.patches.PathPatch(arrow_path, ec=order.piece.power.square_color[0], lw=2, **kwargs)
         self.patches.append(patch)
+        self.junction = self._get_junction()
+    
+    def set_virtual(self, virtual):
+        linestyle = ":" if virtual else "-"
+        for patch in self.patches:
+            patch.set_linestyle(linestyle)
+    
+    def _get_junction(self):
+        """
+        Get intersection between path and the edge of the landing square
+        """
+        v0, v1 = self.path.vertices[-2:]
+        direction = (v1 - v0) / np.linalg.norm(v1 - v0)
+        junction = v1 - direction * 0.5 / np.max(np.abs(direction))
+        return junction
+    
+    def add_support(self, support_order):
+        patch = mpl.patches.Circle(self.junction, radius=self.width, fc="w", ec="k", lw=1.5)
+        self.support_patches[support_order] = [patch]
+        return self.support_patches[support_order]
+
+class ConvoyOrder(Order):
+    pass
 
 class SupportHoldOrder(Order):
     def __init__(self, piece, supported_order, visualizer, remove_method, virtual=False):
         super().__init__(piece, visualizer, remove_method, virtual)
         
         self.supported_order = supported_order
-        self.supported_order.add_support(self)
         
         self.chess_path = ChessPath(piece, supported_order.piece.square)
         
@@ -222,18 +234,54 @@ class SupportHoldOrder(Order):
 
 class SupportHoldOrderArtist(OrderArtist):
     def __init__(self, order):
-        # junction = order.supported_order.artist.get_junction(order)
-        path = order.chess_path.artist.compute_path(shrink=order.supported_order.artist.radius)
+        super().__init__(order)
+        
+        self.path = order.chess_path.artist.compute_path(shrink=order.supported_order.artist.radius)
         kwargs = dict(fc="none", joinstyle="round", capstyle="round")
-        self.patches = []
-        patch = mpl.patches.PathPatch(path, ec="k", lw=4, **kwargs)
+        patch = mpl.patches.PathPatch(self.path, ec="k", lw=4, **kwargs)
         self.patches.append(patch)
-        patch = mpl.patches.PathPatch(path, ec=order.piece.power.square_color[0], lw=2, **kwargs)
+        patch = mpl.patches.PathPatch(self.path, ec=order.piece.power.square_color[0], lw=2, **kwargs)
         self.patches.append(patch)
+
+class SupportMoveOrder(Order):
+    def __init__(self, piece, supported_order, visualizer, remove_method, virtual=False):
+        super().__init__(piece, visualizer, remove_method, virtual)
+        
+        self.supported_order = supported_order
+        self.chess_path = ChessPath(piece, supported_order.landing_square)
+        self.artist = self.visualizer.make_order_artist(self)
+    
+    def __str__(self):
+        return f"{self.piece} support {self.supported_order}"
+    
+    def is_like(self, piece, supported_order):
+        return self.piece == piece and self.supported_order == supported_order
+    
+    def execute(self, board, console):
+        if not self.chess_path.valid:
+            console.out(f"{self.piece} cannot support {self.supported_order}.")
+            return False
+        console.out(f"{self.piece} supported {self.supported_order}.")
+        return True
+
+class SupportMoveOrderArtist(OrderArtist):
+    def __init__(self, order):
+        super().__init__(order)
+        
+        self.path = order.chess_path.artist.compute_path(support=order.supported_order.artist.junction)
+        kwargs = dict(fc="none", joinstyle="round", capstyle="round")
+        patch = mpl.patches.PathPatch(self.path, ec="k", lw=4, **kwargs)
+        self.patches.append(patch)
+        patch = mpl.patches.PathPatch(self.path, ec=order.piece.power.square_color[0], lw=2, **kwargs)
+        self.patches.append(patch)
+
+class SupportConvoyOrder(Order):
+    pass
 
 class BuildOrder(Order):
     def __init__(self, power, piece_code, square, visualizer, remove_method, virtual=False):
         super().__init__(None, visualizer, remove_method, virtual)
+        
         self.power = power
         self.piece_code = piece_code
         self.square = square
@@ -252,11 +300,14 @@ class BuildOrder(Order):
 
 class BuildOrderArtist(OrderArtist):
     def __init__(self, order):
+        super().__init__(order)
+        
         square = order.square
         rank, file = square.rank, square.file
         patch = mpl.patches.Circle((square.file, square.rank), radius=.45, fc="none", ec="k", ls=":", lw=1, capstyle="butt")
         piece = Piece(order.piece_code, order.power, order.square, order.visualizer)
-        self.patches = [patch] + piece.artist.get_patches()
+        self.patches.append(patch)
+        self.patches.extend(piece.artist.get_patches())
 
 class DisbandOrder(Order):
     def __init__(self, piece, visualizer, remove_method, virtual=False):
@@ -274,7 +325,8 @@ class DisbandOrder(Order):
 
 class DisbandOrderArtist(OrderArtist):
     def __init__(self, order):
-        self.patches = []
+        super().__init__(order)
+        
         square = order.piece.square
         rank, file = square.rank, square.file
         w = .45
