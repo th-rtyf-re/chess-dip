@@ -124,7 +124,6 @@ class GameManager:
         
         # Finally, remove order and all convoys
         order._full_remove_method(order)
-        # print(order.convoys)
         for convoy_order in order.convoys:
             convoy_order._full_remove_method(convoy_order)
         
@@ -137,12 +136,11 @@ class GameManager:
         order_subclass = self.order_subclasses[order_code]
         # find matching order
         for other_order in self.orders:
-            # the use of super() is for handling support orders
             if isinstance(other_order, order_subclass) and args == order_subclass.get_args(other_order):
                 order = other_order
                 order.set_virtual(order.virtual and virtual)
                 return order
-            elif isinstance(other_order, SupportOrder) and issubclass(order_subclass, SupportOrder) and other_order.is_inheritable(*args):
+            elif type(other_order) is SupportOrder and issubclass(order_subclass, SupportOrder) and other_order.is_inheritable(*args):
                 # found inheritable order
                 order = order_subclass(*args, self.visualizer, self.full_remove_order, virtual=virtual)
                 order.inherit_convoys(other_order)
@@ -160,7 +158,7 @@ class GameManager:
     def clear_conflicting_orders(self, order):
         for other_order in self.orders:
             if other_order.piece == order.piece and not other_order.virtual and not order.virtual:
-                other_order.retract()
+                self.retract_order(other_order)
     
     def add_convoys(self, order):
         for square in order.get_intermediate_squares():
@@ -307,7 +305,6 @@ class GameManager:
                     continue
                 order = self.find_order_on_square(square, virtual=False)
                 if order is not None:
-                    # order.retract()
                     self.retract_order(order)
                     stale = True
             elif power is None:
@@ -343,5 +340,6 @@ if __name__ == "__main__":
     
     # GM._process_order(powers[2], "h1sh8h")
     # GM._process_order(powers[2], "f1sh3ch1sh8")
+    # GM._process_order(powers[2], "f1sh3ch1h8")
     GM.sandbox()
     
