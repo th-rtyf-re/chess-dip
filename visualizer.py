@@ -7,6 +7,7 @@ import numpy as np
 from piece import Piece, PieceArtist
 from board import BoardArtist
 from order import *
+from order_artists import *
 
 class Visualizer:
     def __init__(self):
@@ -74,7 +75,7 @@ class Visualizer:
         fc = self.board_artist.get_square_fc(square, power)
         self.sc_artists[square.rank, square.file].set_fc(fc)
     
-    def make_order_artist(self, order):
+    def make_order_artist(self, order, supported_artist):
         if isinstance(order, HoldOrder):
             return HoldOrderArtist(order)
         elif isinstance(order, MoveOrder):
@@ -82,13 +83,13 @@ class Visualizer:
         elif isinstance(order, ConvoyOrder):
             return ConvoyOrderArtist(order)
         elif isinstance(order, SupportHoldOrder):
-            return SupportHoldOrderArtist(order)
+            return SupportHoldOrderArtist(order, supported_artist)
         elif isinstance(order, SupportMoveOrder):
-            return SupportMoveOrderArtist(order)
+            return SupportMoveOrderArtist(order, supported_artist)
         elif isinstance(order, SupportConvoyOrder):
-            return SupportConvoyOrderArtist(order)
+            return SupportConvoyOrderArtist(order, supported_artist)
         elif isinstance(order, SupportOrder):
-            return SupportOrderArtist(order)
+            return SupportOrderArtist(order, supported_artist)
         elif isinstance(order, BuildOrder):
             return BuildOrderArtist(order)
         elif isinstance(order, DisbandOrder):
@@ -102,7 +103,22 @@ class Visualizer:
     def erase_order(self, order):
         order.artist.remove()
     
-    def add_support(self, order, support_order):
-        new_patches = order.artist.add_support(support_order)
+    def add_support(self, artist, support_artist):
+        new_patches = artist.add_support(support_artist)
         for patch in new_patches:
             self.ax.add_patch(patch)
+    
+    def remove_support(self, artist, support_artist):
+        artist.remove_support(support_artist)
+    
+    def add_artist(self, artist):
+        artist.add_to_ax(self.ax)
+    
+    def erase_artist(self, artist):
+        artist.remove()
+    
+    def set_virtual(self, artist, virtual=True):
+        artist.set_virtual(virtual)
+    
+    def set_supported_artist(self, artist, supported_artist):
+        artist.set_supported_artist(supported_artist)

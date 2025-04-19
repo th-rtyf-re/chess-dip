@@ -1,8 +1,5 @@
 # -*-coding:utf8-*-
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib.path import Path
 import numpy as np
 
 from piece import *
@@ -25,11 +22,9 @@ class Order:
         SUPPORT_CONVOY: CONVOY
     }
     
-    def __init__(self, piece, *other_args, visualizer=None, remove_method=None, virtual=False):
+    def __init__(self, piece, *other_args, virtual=False):
         self.piece = piece
         self.other_args = other_args
-        self.visualizer = visualizer
-        self._full_remove_method = remove_method
         self.virtual = virtual
         
         self.supports = []
@@ -40,6 +35,50 @@ class Order:
     def __str__(self):
         pass
     
+    def get_piece(self):
+        return self.piece
+    
+    def get_virtual(self):
+        return self.virtual
+    
+    def set_virtual(self, virtual=True):
+        self.virtual = virtual
+        # self.artist.set_virtual(virtual)
+        # for convoy_order in self.convoys:
+            # convoy_order.set_virtual(virtual)
+    
+    def get_supports(self):
+        return self.supports
+    
+    def add_support(self, support_order):
+        self.supports.append(support_order)
+        # self.visualizer.add_support(self, support_order)
+    
+    def remove_support(self, support_order):
+        self.supports.remove(support_order)
+        # self.artist.remove_support(support_order)
+    
+    def get_convoys(self):
+        return self.convoys
+
+    def add_convoy(self, convoy_order):
+        self.convoys.append(convoy_order)
+    
+    def remove_convoy(self, convoy_order):
+        self.convoys.remove(convoy_order)
+    
+    def set_convoys(self, convoys):
+        self.convoys = convoys
+    
+    def get_supported_order(self):
+        return self.supported_order
+    
+    def get_convoyed_order(self):
+        return self.convoyed_order
+    
+    def set_convoyed_order(self, order):
+        self.convoyed_order = order
+    
     def get_args(self):
         return (self.piece,) + self.other_args
     
@@ -49,44 +88,14 @@ class Order:
     def is_inheritable(self, *args):
         return False
     
-    def get_piece(self):
-        return self.piece
-    
     def execute(self, board, console):
         return False
     
-    def set_virtual(self, virtual=True):
-        self.virtual = virtual
-        self.artist.set_virtual(virtual)
-        for convoy_order in self.convoys:
-            convoy_order.set_virtual(virtual)
-    
-    def add_support(self, support_order):
-        self.supports.append(support_order)
-        self.visualizer.add_support(self, support_order)
-    
-    def remove_support(self, support_order):
-        self.supports.remove(support_order)
-        self.artist.remove_support(support_order)
-    
-    def add_convoy(self, convoy_order):
-        self.convoys.append(convoy_order)
-    
-    def remove_convoy(self, convoy_order):
-        self.convoys.remove(convoy_order)
-    
-    def inherit_convoys(self, other_order):
-        self.convoys = other_order.convoys
-        for convoy in self.convoys:
-            convoy.convoyed_order = self
-            convoy.set_virtual(self.virtual)
-
 class HoldOrder(Order):
-    def __init__(self, piece, visualizer, remove_method, virtual=False):
-        super().__init__(piece, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+    def __init__(self, piece, virtual=False):
+        super().__init__(piece, virtual=virtual)
         
         self.chess_path = ChessPath(piece, piece.square)
-        self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
@@ -102,14 +111,12 @@ class HoldOrder(Order):
         return True
 
 class MoveOrder(Order):
-    def __init__(self, piece, landing_square, visualizer, remove_method, virtual=False):
-        super().__init__(piece, landing_square, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+    def __init__(self, piece, landing_square, virtual=False):
+        super().__init__(piece, landing_square, virtual=virtual)
         
         self.landing_square = landing_square
         self.chess_path = ChessPath(piece, self.landing_square)
         
-        self.artist = self.visualizer.make_order_artist(self)
-    
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} move to {self.landing_square}"
@@ -133,15 +140,14 @@ class MoveOrder(Order):
         return True
 
 class ConvoyOrder(Order):
-    def __init__(self, piece, square, convoyed_order, visualizer, remove_method, virtual=False):
+    def __init__(self, piece, square, convoyed_order, virtual=False):
         """
         piece should be None
         """
-        super().__init__(piece, square, convoyed_order, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+        super().__init__(piece, square, convoyed_order, virtual=virtual)
         
         self.square = square
         self.convoyed_order = convoyed_order
-        self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
@@ -156,17 +162,13 @@ class ConvoyOrder(Order):
             return True
         console.out(f"{self.square} cannot support {self.convoyed_order}.")
         return False
-    
-    def update_convoyed_order(self, new_order):# because it can change!
-        self.convoyed_order = new_order
 
 class SupportOrder(Order):
-    def __init__(self, piece, supported_square, visualizer, remove_method, virtual=False):
-        super().__init__(piece, supported_square, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+    def __init__(self, piece, supported_square, virtual=False):
+        super().__init__(piece, supported_square, virtual=virtual)
         
         self.supported_square = supported_square
         self.chess_path = ChessPath(piece, supported_square)
-        self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
@@ -185,13 +187,12 @@ class SupportOrder(Order):
         return piece == self.piece and supported_order.get_landing_square() == self.supported_square
 
 class SupportHoldOrder(SupportOrder):
-    def __init__(self, piece, supported_order, visualizer, remove_method, virtual=False):
-        super(SupportOrder, self).__init__(piece, supported_order, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+    def __init__(self, piece, supported_order, virtual=False):
+        super(SupportOrder, self).__init__(piece, supported_order, virtual=virtual)
         
         self.supported_order = supported_order
         self.supported_square = self.supported_order.get_landing_square()
         self.chess_path = ChessPath(piece, self.supported_square)
-        self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
@@ -205,13 +206,12 @@ class SupportHoldOrder(SupportOrder):
         return True
 
 class SupportMoveOrder(SupportOrder):
-    def __init__(self, piece, supported_order, visualizer, remove_method, virtual=False):
-        super(SupportOrder, self).__init__(piece, supported_order, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+    def __init__(self, piece, supported_order, virtual=False):
+        super(SupportOrder, self).__init__(piece, supported_order, virtual=virtual)
         
         self.supported_order = supported_order
         self.supported_square = self.supported_order.get_landing_square()
         self.chess_path = ChessPath(piece, self.supported_square)
-        self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
@@ -228,13 +228,12 @@ class SupportMoveOrder(SupportOrder):
         return True
 
 class SupportConvoyOrder(SupportOrder):
-    def __init__(self, piece, supported_order, visualizer, remove_method, virtual=False):
-        super(SupportOrder, self).__init__(piece, supported_order, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+    def __init__(self, piece, supported_order, virtual=False):
+        super(SupportOrder, self).__init__(piece, supported_order, virtual=virtual)
         
         self.supported_order = supported_order
         self.supported_square = self.supported_order.get_landing_square()
         self.chess_path = ChessPath(piece, self.supported_square)
-        self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
@@ -251,15 +250,13 @@ class SupportConvoyOrder(SupportOrder):
         return True
 
 class BuildOrder(Order):
-    def __init__(self, power, piece_code, square, visualizer, remove_method, virtual=False):
-        super().__init__(None, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+    def __init__(self, power, piece_code, square, virtual=False):
+        super().__init__(None, virtual=virtual)
         
         self.power = power
         self.piece_code = piece_code
         self.square = square
-        
-        self.artist = self.visualizer.make_order_artist(self)
-    
+            
     def __str__(self):
         names = ["Pawn", "Knight", "Bishop", "Rook", "King"]
         return f"{self.power} build {names[self.piece_code]} on {self.square}"
@@ -271,11 +268,9 @@ class BuildOrder(Order):
         return piece
 
 class DisbandOrder(Order):
-    def __init__(self, piece, visualizer, remove_method, virtual=False):
-        super().__init__(piece, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+    def __init__(self, piece, virtual=False):
+        super().__init__(piece, virtual=virtual)
         
-        self.artist = self.visualizer.make_order_artist(self)
-    
     def __str__(self):
         return f"{self.piece} disband"
     

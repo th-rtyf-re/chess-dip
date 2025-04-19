@@ -11,6 +11,7 @@ from board import Board
 from visualizer import Visualizer
 from chess_path import *
 from order import *
+from order_artists import *
 from parser import *
 
 class Console:
@@ -23,6 +24,187 @@ class Console:
     def input(self, *args, **kwargs):
         return input(*args, **kwargs)
 
+class OrderManager:
+    """
+    Managing orders and their artists
+    """
+    def __init__(self, visualizer):
+        self.visualizer = visualizer
+        self.artists = {}
+        
+        self.order_subclasses = {
+            Order.HOLD: HoldOrder,
+            Order.MOVE: MoveOrder,
+            Order.CONVOY: ConvoyOrder,
+            Order.SUPPORT: SupportOrder,
+            Order.SUPPORT_HOLD: SupportHoldOrder,
+            Order.SUPPORT_MOVE: SupportMoveOrder,
+            Order.SUPPORT_CONVOY: SupportConvoyOrder,
+            Order.BUILD: BuildOrder,
+            Order.DISBAND: DisbandOrder
+        }
+    
+    def has_orders(self):
+        return bool(self.artists)
+    
+    def get_orders(self):
+        return self.artists.keys()
+    
+    def get_items(self):
+        return self.artists.items()
+    
+    def clear(self):
+        self.artists.clear()
+    
+    def add(self, order):
+        supported_order = order.get_supported_order()
+        supported_artist = None
+        if supported_order is not None:
+            supported_artist = self.artists[supported_order]
+        order_artist = self.visualizer.make_order_artist(order, supported_artist)
+        self.artists[order] = order_artist
+        self.visualizer.add_artist(order_artist)
+    
+    def remove(self, order):
+        order_artist = self.artists[order]
+        self.visualizer.erase_artist(order_artist)
+        del self.artists[order]
+    
+    def set_virtual(self, order, virtual=True):
+        order.set_virtual(virtual)
+        self.visualizer.set_virtual(self.artists[order], virtual)
+        for convoy_order in order.convoys:
+            self.set_virtual(convoy_order, virtual)
+    
+    def add_support(self, order, support_order):
+        order.add_support(support_order)
+        self.visualizer.add_support(self.artists[order], self.artists[support_order])
+    
+    def remove_support(self, order, support_order):
+        order.remove_support(support_order)
+        self.visualizer.remove_support(self.artists[order], self.artists[support_order])
+    
+    def add_convoy(self, order, convoy_order):
+        order.add_convoy(convoy_order)
+    
+    def remove_convoy(self, order, convoy_order):
+        order.remove_convoy(convoy_order)
+    
+    def inherit_convoys(self, order, other_order):
+        convoys = other_order.get_convoys()
+        order.set_convoys(convoys)
+        for convoy_order in convoys:
+            convoy_order.set_convoyed_order(order)
+            convoy_order.set_virtual(order.get_virtual())
+    
+    def retract(self, order):
+        # If supported by a real order, keep but make virtual
+        for support_order in order.get_supports():
+            if not support_order.get_virtual():
+                self.set_virtual(order)
+                return
+        
+        # If supporting an order, update the supported order's support list.
+        supported_order = order.get_supported_order()
+        if supported_order is not None:
+            self.remove_support(supported_order, order)
+            # If supported order is virtual, try removing that order as well
+            if supported_order.get_virtual():
+                self.retract(supported_order)
+        
+        # If convoyed by a supported convoy order, keep in some sense
+        for convoy_order in order.get_convoys():
+            if convoy_order.get_supports():
+                # If order is a support, convert into generic support
+                if isinstance(order, SupportOrder):
+                    generic_support_order = SupportOrder(order.piece, order.supported_square, virtual=True)
+                    self.inherit_convoys(generic_support_order, order)
+                    self.remove(order)
+                    self.add(generic_support_order)
+                else: # Move order: make virtual
+                    order.set_virtual()
+                return
+        
+        # If convoying an order, try to retract the convoyed order: if that
+        # succeeds, then order will also be removed.
+        convoyed_order = order.get_convoyed_order()
+        if convoyed_order is not None:
+            self.retract(convoyed_order)
+            return
+        
+        # Finally, remove order and all convoys
+        self.remove(order)
+        for convoy_order in order.get_convoys():
+            self.remove(convoy_order)
+        return
+    
+    def get_order(self, order_code, args, virtual=False):
+        """
+        args is what is used to construct the order.
+        """
+        order_subclass = self.order_subclasses[order_code]
+        # find matching order
+        inheritable_order = None
+        for other_order in self.get_orders():
+            if isinstance(other_order, order_subclass) and args == order_subclass.get_args(other_order):
+                # found matching order
+                order = other_order
+                self.set_virtual(order, order.get_virtual() and virtual)
+                return order
+            elif type(other_order) is SupportOrder and issubclass(order_subclass, SupportOrder) and other_order.is_inheritable(*args):
+                # found inheritable order
+                inheritable_order = other_order
+                break
+        if inheritable_order is not None:
+            order = order_subclass(*args, virtual=virtual)
+            self.inherit_convoys(order, other_order)
+            self.remove(inheritable_order)
+            self._clear_conflicting_orders(order)
+            self.add(order)
+            return order
+        else:
+            # no match: make new order
+            order = order_subclass(*args, virtual=virtual)
+            self._clear_conflicting_orders(order)
+            self.add(order)
+            self.add_convoys(order)
+            return order
+    
+    def _clear_conflicting_orders(self, order):
+        """
+        Does not work for clearing convoy orders, although this function
+        should never be used for that
+        """
+        conflicting_orders = []
+        for other_order in self.get_orders():
+            if other_order.get_piece() == order.get_piece() and not other_order.get_virtual() and not order.get_virtual():
+                conflicting_orders.append(other_order)
+        for order in conflicting_orders:
+            self.retract(order)
+    
+    def add_convoys(self, order):
+        """
+        This is the only place where convoys are added. Note that we do not
+        check for conflicting orders.
+        """
+        for square in order.get_intermediate_squares():
+            convoy_order = ConvoyOrder(None, square, order, virtual=order.virtual)
+            self.add(convoy_order)
+            self.add_convoy(order, convoy_order)
+    
+    def get_support_order(self, order_code, piece, supported_order_code, supported_order_args, virtual=False):
+        supported_order = self.get_order(supported_order_code, supported_order_args, virtual=True)
+        order = self.get_order(order_code, (piece, supported_order), virtual=virtual)
+        self.add_support(supported_order, order)
+        return order
+    
+    def get_support_convoy_order(self, piece, convoy_square, convoyed_order_code, convoyed_order_args, virtual=False):
+        convoyed_order = self.get_order(convoyed_order_code, convoyed_order_args, virtual=True)
+        convoy_order = self.get_order(Order.CONVOY, (None, convoy_square, convoyed_order), virtual=True)
+        order = self.get_order(Order.SUPPORT_CONVOY, (piece, convoy_order), virtual=virtual)
+        self.add_support(convoy_order, order)
+        return order
+
 class GameManager:
     def __init__(self, powers=None):
         if powers is None:
@@ -30,6 +212,7 @@ class GameManager:
         else:
             self.powers = powers
         self.visualizer = Visualizer()
+        self.order_manager = OrderManager(self.visualizer)
         self.console = Console()
         self.board = Board(self.powers, self.visualizer)
         self.orders = []# including virtual orders and convoy orders, I guess
@@ -50,141 +233,40 @@ class GameManager:
     def update_view(self):
         self.visualizer.render()
     
-    def setup_pieces(self, notations, power_name):
+    def setup_pieces(self, power, notations):
         for notation in notations:
             instruc = notation.replace(" ", "")
             piece_code = Piece.piece_dict[instruc[0]]
             square = self._square(instruc[1:3])
-            power = self._get_power(power_name)
             self.board.add_piece(piece_code, power, square)
     
     def _get_power(self, power_name):
+        """
+        power_name is assumed lowercase
+        """
         for power in self.powers:
             full_name = power.name.lower()
-            if len(power_name) <= len(full_name) and full_name[:len(power_name)] == power_name.lower():
+            if len(power_name) <= len(full_name) and full_name[:len(power_name)] == power_name:
                 return power
         raise ValueError(f"Could not find power {power_name}!")
     
-    def find_order(self, piece, order_code=None, virtual=None):
-        for order in self.orders:
-            if ((order_code is None or isinstance(order, self.order_subclasses[order_code]))
-                and order.piece == piece):
-                if virtual is None:
-                    return order
-                elif order.virtual == virtual:
-                    return order
-        return None
-    
-    def find_order_on_square(self, square, order_code=None, virtual=None):
+    def _find_order_on_square(self, square, virtual=None):
         piece = self.board.get_piece(square)
         if piece is not None:
-            return self.find_order(piece, order_code=order_code, virtual=virtual)
+            for order in self.order_manager.get_orders():
+                if order.get_piece() == piece:
+                    if virtual is None:
+                        return order
+                    elif order.get_virtual() == virtual:
+                        return order
         return None
     
-    def add_order(self, order):
-        self.orders.append(order)
-        self.visualizer.add_order(order)
-    
-    def full_remove_order(self, order):
-        self.orders.remove(order)
-        self.visualizer.erase_order(order)
-    
-    def retract_order(self, order):
-        # If supported by a real order, keep but make virtual
-        for support_order in order.supports:
-            if not support_order.virtual:
-                order.set_virtual()
-                return
-        
-        # If supporting an order, update the supported order's support list.
-        if order.supported_order is not None:
-            order.supported_order.remove_support(order)
-            # If supported order is virtual, try removing that order as well
-            if order.supported_order.virtual:
-                self.retract_order(order.supported_order)
-        
-        # If convoyed by a supported convoy order, keep in some sense
-        for convoy_order in order.convoys:
-            if convoy_order.supports:
-                # If order is a support, convert into generic support
-                if isinstance(order, SupportOrder):
-                    generic_support_order = SupportOrder(order.piece, order.supported_square, order.visualizer, order._full_remove_method, virtual=True)
-                    generic_support_order.inherit_convoys(order)
-                    self.full_remove_order(order)
-                    self.add_order(generic_support_order)
-                else: # Move order
-                    order.set_virtual()
-                return
-        
-        # If convoying an order, try to retract the convoyed order: if that
-        # succeeds, then order will also be removed.
-        if order.convoyed_order is not None:
-            self.retract_order(order.convoyed_order)
-            return
-        
-        # Finally, remove order and all convoys
-        order._full_remove_method(order)
-        for convoy_order in order.convoys:
-            convoy_order._full_remove_method(convoy_order)
-        
-        return
-    
-    def get_order(self, order_code, args, virtual=False):
-        """
-        args is what is used to construct the order.
-        """
-        order_subclass = self.order_subclasses[order_code]
-        # find matching order
-        for other_order in self.orders:
-            if isinstance(other_order, order_subclass) and args == order_subclass.get_args(other_order):
-                order = other_order
-                order.set_virtual(order.virtual and virtual)
-                return order
-            elif type(other_order) is SupportOrder and issubclass(order_subclass, SupportOrder) and other_order.is_inheritable(*args):
-                # found inheritable order
-                order = order_subclass(*args, self.visualizer, self.full_remove_order, virtual=virtual)
-                order.inherit_convoys(other_order)
-                self.full_remove_order(other_order)
-                self.clear_conflicting_orders(order)
-                self.add_order(order)
-                return order
-        # no match: make new order
-        order = order_subclass(*args, self.visualizer, self.full_remove_order, virtual=virtual)
-        self.clear_conflicting_orders(order)
-        self.add_order(order)
-        self.add_convoys(order)
-        return order
-    
-    def clear_conflicting_orders(self, order):
-        for other_order in self.orders:
-            if other_order.piece == order.piece and not other_order.virtual and not order.virtual:
-                self.retract_order(other_order)
-    
-    def add_convoys(self, order):
-        for square in order.get_intermediate_squares():
-            convoy_order = ConvoyOrder(None, square, order, self.visualizer, self.full_remove_order, virtual=order.virtual)
-            self.add_order(convoy_order)
-            order.add_convoy(convoy_order)
-    
-    def get_support_order(self, order_code, piece, supported_order_code, supported_order_args, virtual=False):
-        supported_order = self.get_order(supported_order_code, supported_order_args, virtual=True)
-        order = self.get_order(order_code, (piece, supported_order), virtual=virtual)
-        supported_order.add_support(order)
-        return order
-    
-    def get_support_convoy_order(self, piece, convoy_square, convoyed_order_code, convoyed_order_args, virtual=False):
-        convoyed_order = self.get_order(convoyed_order_code, convoyed_order_args, virtual=True)
-        convoy_order = self.get_order(Order.CONVOY, (None, convoy_square, convoyed_order), virtual=True)
-        order = self.get_order(Order.SUPPORT_CONVOY, (piece, convoy_order), virtual=virtual)
-        convoy_order.add_support(order)
-        return order
-    
     def progress(self):
-        for order in self.orders:
-            if not order.virtual:
+        for order, artist in self.order_manager.get_items():
+            if not order.get_virtual():
                 order.execute(self.board, self.console)
-            self.visualizer.erase_order(order)
-        self.orders.clear()
+            self.visualizer.erase_artist(artist)
+        self.order_manager.clear()
     
     def _square(self, square_str):
         """
@@ -195,6 +277,10 @@ class GameManager:
         file = ord(square_str[0]) - ord('a')
         rank = int(square_str[1]) - 1
         return Square(file=file, rank=rank)
+    
+    def process_orders(self, power, messages):
+        for message in messages:
+            self._process_order(power, message.lower().replace(' ', ''))
     
     def _process_order(self, power, message):
         """
@@ -221,22 +307,22 @@ class GameManager:
         
         match order_code:
             case Order.HOLD:
-                self.get_order(order_code, (piece,))
+                self.order_manager.get_order(order_code, (piece,))
                 return True
             case Order.MOVE:
                 landing_square = self._square(args[1])
-                self.get_order(order_code, (piece, landing_square))
+                self.order_manager.get_order(order_code, (piece, landing_square))
                 return True
             case Order.SUPPORT_HOLD:
                 supported_square = self._square(args[1])
                 supported_piece = self.board.get_piece(supported_square)
-                self.get_support_order(order_code, piece, Order.HOLD, (supported_piece,))
+                self.order_manager.get_support_order(order_code, piece, Order.HOLD, (supported_piece,))
                 return True
             case Order.SUPPORT_MOVE:
                 supported_square = self._square(args[1])
                 supported_piece = self.board.get_piece(supported_square)
                 supported_landing_square = self._square(args[3])
-                self.get_support_order(order_code, piece, Order.MOVE, (supported_piece, supported_landing_square))
+                self.order_manager.get_support_order(order_code, piece, Order.MOVE, (supported_piece, supported_landing_square))
                 return True
             case Order.SUPPORT_CONVOY:
                 convoy_square = self._square(args[1])
@@ -248,19 +334,19 @@ class GameManager:
                 if convoy_square not in intermediate_squares:
                     self.console.out("Convoying square cannot convoy along specified path.")
                     return False
-                self.get_support_convoy_order(piece, convoy_square, convoyed_order_code, (convoyed_piece, convoy_landing_square))
+                self.order_manager.get_support_convoy_order(piece, convoy_square, convoyed_order_code, (convoyed_piece, convoy_landing_square))
                 return True
             case Order.BUILD:
                 piece_chr = args[1].upper() if args[1] else "P"
                 piece_code = Piece.piece_dict[piece_chr]
-                order = BuildOrder(power, piece_code, starting_square, self.visualizer, self.full_remove_order)
-                self.clear_conflicting_orders(order)
-                self.add_order(order)
+                order = BuildOrder(power, piece_code, starting_square)
+                self.order_manager._clear_conflicting_orders(order)
+                self.order_manager.add(order)
                 return True
             case Order.DISBAND:
-                order = DisbandOrder(piece, self.visualizer, self.full_remove_order)
-                self.clear_conflicting_orders(order)
-                self.add_order(order)
+                order = DisbandOrder(piece)
+                self.order_manager._clear_conflicting_orders(order)
+                self.order_manager.add(order)
                 return True
             case _:
                 self.console.out("Unknown error!")
@@ -283,11 +369,11 @@ class GameManager:
             elif message in ["help"]:
                 self.console.out("Type \"power\" to specify your power. Type \"build\" to build. Type \"exit\" or \"quit\" to exit.")
             elif message == "orders":
-                if not self.orders:
+                if not self.order_manager.has_orders():
                     self.console.out("No orders to display.")
                 else:
                     self.console.out("Current orders:")
-                    for order in self.orders:
+                    for order in self.order_manager.get_orders():
                         self.console.out(order)
             elif message == "progress":
                 self.progress()
@@ -303,9 +389,9 @@ class GameManager:
                 square = self._square(message[len("remove"):])
                 if square is None:
                     continue
-                order = self.find_order_on_square(square, virtual=False)
+                order = self._find_order_on_square(square, virtual=False)
                 if order is not None:
-                    self.retract_order(order)
+                    self.order_manager.retract(order)
                     stale = True
             elif message[:len("save")] == "save":
                 filename = message[len("save"):]
@@ -340,13 +426,11 @@ if __name__ == "__main__":
         Power(-1, "white", color_dict["white"], ("w", "w"), -1),
     ]
     GM = GameManager(powers)
-    GM.setup_pieces(["K d1", "P c2", "N b1", "Ra1"], "England")
-    GM.setup_pieces(["K e1", "P e2", "B f1", "Rh1"], "Italy")
-    GM.setup_pieces(["K e8", "P e7", "N g8", "Rh8"], "France")
-    GM.setup_pieces(["K d8", "P d7", "B c8", "Ra8"], "Scandinavia")
+    GM.setup_pieces(powers[1], ["K d1", "P c2", "N b1", "Ra1"])
+    GM.setup_pieces(powers[2], ["K e1", "P e2", "B f1", "Rh1"])
+    GM.setup_pieces(powers[3], ["K e8", "P e7", "N g8", "Rh8"])
+    GM.setup_pieces(powers[4], ["K d8", "P d7", "B c8", "Ra8"])
     
-    # GM._process_order(powers[2], "h1sh8h")
-    # GM._process_order(powers[2], "f1sh3ch1sh8")
-    # GM._process_order(powers[2], "f1sh3ch1h8")
+    # GM.process_orders(powers[2], ["f1sh3ch1sh8", "h1sh8h"])
     GM.sandbox()
     
