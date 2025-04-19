@@ -307,6 +307,13 @@ class GameManager:
                 if order is not None:
                     self.retract_order(order)
                     stale = True
+            elif message[:len("save")] == "save":
+                filename = message[len("save"):]
+                if not filename:
+                    filename = "render.png"
+                elif '.' not in filename:
+                    filename += ".png"
+                plt.savefig(filename, dpi=300)
             elif power is None:
                 self.console.out("No power has been selected. Select a power by writing \"power [name]\"")
             else: # Message is an order
