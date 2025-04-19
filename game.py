@@ -96,31 +96,25 @@ class GameManager:
                 order.set_virtual()
                 return
         
-        # If convoyed by a supported convoy order, keep in some sense
-        for convoy_order in order.convoys:
-            if convoy_order.supports:
-                # TO DO: if order is a support, convert into generic support
-                if isinstance(order, SupportOrder):
-                    generic_support_order = SupportOrder(order.piece, order.supported_square, order.visualizer, order._full_remove_method, virtual=True)
-                    generic_support_order.inherit_convoys(order)
-                    # If supporting an order, update support list.
-                    if order.supported_order is not None:
-                        order.supported_order.remove_support(order)
-                        # If supported order is virtual, try removing that order as well
-                        if order.supported_order.virtual:
-                            self.retract_order(order.supported_order)
-                    self.full_remove_order(order)
-                    self.add_order(generic_support_order)
-                else: # Move order
-                    order.set_virtual()
-                return
-        
-        # If supporting an order, update support list.
+        # If supporting an order, update the supported order's support list.
         if order.supported_order is not None:
             order.supported_order.remove_support(order)
             # If supported order is virtual, try removing that order as well
             if order.supported_order.virtual:
                 self.retract_order(order.supported_order)
+        
+        # If convoyed by a supported convoy order, keep in some sense
+        for convoy_order in order.convoys:
+            if convoy_order.supports:
+                # If order is a support, convert into generic support
+                if isinstance(order, SupportOrder):
+                    generic_support_order = SupportOrder(order.piece, order.supported_square, order.visualizer, order._full_remove_method, virtual=True)
+                    generic_support_order.inherit_convoys(order)
+                    self.full_remove_order(order)
+                    self.add_order(generic_support_order)
+                else: # Move order
+                    order.set_virtual()
+                return
         
         # If convoying an order, try to retract the convoyed order: if that
         # succeeds, then order will also be removed.

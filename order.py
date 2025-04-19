@@ -55,41 +55,6 @@ class Order:
     def execute(self, board, console):
         return False
     
-    def retract(self):
-        # If supported by a real order, keep but make virtual
-        for support_order in self.supports:
-            if not support_order.virtual:
-                self.set_virtual()
-                return
-        
-        # If convoyed by a supported convoy order, keep in some sense
-        for convoy_order in self.convoys:
-            if convoy_order.supports:
-                # TO DO: if self is a support, convert into generic support
-                self.set_virtual()
-                return
-        
-        # If supporting an order, update support list.
-        if self.supported_order is not None:
-            self.supported_order.remove_support(self)
-            # If supported order is virtual, try removing that order as well
-            if self.supported_order.virtual:
-                self.supported_order.retract()
-        
-        # If convoying an order, try to retract the convoyed order: if that
-        # succeeds, then self will also be removed.
-        if self.convoyed_order is not None:
-            self.convoyed_order.retract()
-            return
-        
-        # Finally, remove self and all convoys
-        self._full_remove_method(self)
-        # print(self.convoys)
-        for convoy_order in self.convoys:
-            convoy_order._full_remove_method(convoy_order)
-        
-        return
-    
     def set_virtual(self, virtual=True):
         self.virtual = virtual
         self.artist.set_virtual(virtual)
