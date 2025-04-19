@@ -15,50 +15,52 @@ class ChessPath:
         self.start = self.piece.square
         self.land = landing_square
         
-        self.intermediate_squares = []
-        self.valid = self._validate_path()
+        self.valid, self.intermediate_squares = ChessPath.validate_path(self.piece, self.start, self.land)
         
         self.artist = ChessPathArtist(self)
     
-    def _validate_path(self):
-        dfile = self.land.file - self.start.file
-        drank = self.land.rank - self.start.rank
+    def validate_path(piece, start, land):
+        valid = False
+        intermediate_squares = []
+        dfile = land.file - start.file
+        drank = land.rank - start.rank
         dfile_sign = 1 if dfile >= 0 else -1
         drank_sign = 1 if drank >= 0 else -1
-        file_range = range(self.start.file, self.land.file, dfile_sign)[1:]
-        rank_range = range(self.start.rank, self.land.rank, drank_sign)[1:]
-        match self.piece.code:
+        file_range = range(start.file, land.file, dfile_sign)[1:]
+        rank_range = range(start.rank, land.rank, drank_sign)[1:]
+        match piece.code:
             case Piece.KING:
                 if abs(dfile) <= 1 and abs(drank) <= 1:
-                    return True
+                    valid = True
             case Piece.ROOK:
                 if dfile == 0:
-                    self.intermediate_squares = [Square(rank=y, file=self.start.file) for y in rank_range]
-                    return True
+                    intermediate_squares = [Square(rank=y, file=start.file) for y in rank_range]
+                    valid = True
                 elif drank == 0:
-                    self.intermediate_squares = [Square(rank=self.start.rank, file=x) for x in file_range]
-                    return True
+                    intermediate_squares = [Square(rank=start.rank, file=x) for x in file_range]
+                    valid = True
             case Piece.BISHOP:
                 if abs(dfile) == abs(drank):
-                    self.intermediate_squares = [Square(file=x, rank=y) for x, y in zip(file_range, rank_range)]
-                    return True
+                    intermediate_squares = [Square(file=x, rank=y) for x, y in zip(file_range, rank_range)]
+                    valid = True
             case Piece.KNIGHT:
                 if (abs(drank) == 2 and abs(dfile) == 1) or (abs(dfile) == 2 and abs(drank) == 1):
-                    return True
+                    valid = True
             case Piece.PAWN:
                 if drank == 1 and abs(dfile) <= 1:
-                    return True
+                    valid = True
                 
+                home_rank_pawn = True
                 if self.piece.power.side == Power.WHITE:
-                    home_rank_pawn = self.land.rank < 2
+                    home_rank_pawn = land.rank < 2
                 elif self.piece.power.side == Power.BLACK:
-                    home_rank_pawn = self.land.rank >= 6
+                    home_rank_pawn = land.rank >= 6
                 if home_rank_pawn and drank == 2 and dfile == 0:
-                    self.intermediate_squares.append(Square(rank=self.start.rank + 1, file=self.start.file))
-                    return True
+                    intermediate_squares.append(Square(rank=start.rank + 1, file=start.file))
+                    valid = True
             case _:
-                return False
-        return False
+                pass
+        return valid, intermediate_squares
     
 
 class ChessPathArtist:
@@ -177,6 +179,9 @@ class ChessPathArtist:
     def _shrink_line(self, start, end, shrink):
         v_prev = np.asarray(start)
         v_next = np.asarray(end)
-        direction = (v_next - v_prev) / np.linalg.norm(v_next - v_prev)
+        direction = (v_next - v_prev)
+        norm = np.linalg.norm(v_next - v_prev)
+        if norm != 0:
+            direction = direction / norm
         return tuple(v_next - shrink * direction)
         

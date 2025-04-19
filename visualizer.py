@@ -79,14 +79,20 @@ class Visualizer:
             return HoldOrderArtist(order)
         elif isinstance(order, MoveOrder):
             return MoveOrderArtist(order)
-        elif isinstance(order, BuildOrder):
-            return BuildOrderArtist(order)
-        elif isinstance(order, DisbandOrder):
-            return DisbandOrderArtist(order)
+        elif isinstance(order, ConvoyOrder):
+            return ConvoyOrderArtist(order)
         elif isinstance(order, SupportHoldOrder):
             return SupportHoldOrderArtist(order)
         elif isinstance(order, SupportMoveOrder):
             return SupportMoveOrderArtist(order)
+        elif isinstance(order, SupportConvoyOrder):
+            return SupportConvoyOrderArtist(order)
+        elif isinstance(order, SupportOrder):
+            return SupportOrderArtist(order)
+        elif isinstance(order, BuildOrder):
+            return BuildOrderArtist(order)
+        elif isinstance(order, DisbandOrder):
+            return DisbandOrderArtist(order)
         else:
             raise ValueError(f"No artist for {order}!")
     

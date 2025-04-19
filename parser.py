@@ -48,7 +48,7 @@ class Parser:
                 args = (m["starting_square"], m["supported_starting_square"], m["supported_move_code"], m["supported_landing_square"])
                 return self.order_class.SUPPORT_MOVE, args
             elif m["convoy_starting_square"] is not None:
-                args = (m["starting_square"], m["convoy_starting_square"], m["convoy_code"], m["convoy_landing_square"])
+                args = (m["starting_square"], m["supported_starting_square"], m["convoy_starting_square"], m["convoy_code"], m["convoy_landing_square"])
                 return self.order_class.SUPPORT_CONVOY, args
         elif m["build_piece"] is not None:
             args = (m["build_square"], m["build_piece"])

@@ -12,6 +12,7 @@ class Order:
     HOLD = 0
     MOVE = 1
     CONVOY = 2
+    SUPPORT = 6
     SUPPORT_HOLD = 3
     SUPPORT_MOVE = 4
     SUPPORT_CONVOY = 5
@@ -24,20 +25,29 @@ class Order:
         SUPPORT_CONVOY: CONVOY
     }
     
-    def __init__(self, piece, visualizer, remove_method, virtual=False):
+    def __init__(self, piece, *other_args, visualizer=None, remove_method=None, virtual=False):
         self.piece = piece
+        self.other_args = other_args
         self.visualizer = visualizer
         self._full_remove_method = remove_method
         self.virtual = virtual
         
         self.supports = []
+        self.convoys = []
         self.supported_order = None
+        self.convoyed_order = None
     
     def __str__(self):
         pass
     
-    def is_like(self, other):
-        pass
+    def get_args(self):
+        return (self.piece,) + self.other_args
+    
+    def get_intermediate_squares(self):
+        return []
+    
+    def is_inheritable(self, *args):
+        return False
     
     def get_piece(self):
         return self.piece
@@ -45,22 +55,46 @@ class Order:
     def execute(self, board, console):
         return False
     
-    def remove(self):
-        if not self.virtual and self.supports:
-            self.set_virtual(True)
-        elif not self.supports: # full removal
-            self._full_remove_method(self)
-            if self.supported_order is not None:
-                self.supported_order.remove_support(self)
-                self.supported_order.update()
+    def retract(self):
+        # If supported by a real order, keep but make virtual
+        for support_order in self.supports:
+            if not support_order.virtual:
+                self.set_virtual()
+                return
+        
+        # If convoyed by a supported convoy order, keep in some sense
+        for convoy_order in self.convoys:
+            if convoy_order.supports:
+                # TO DO: if self is a support, convert into generic support
+                self.set_virtual()
+                return
+        
+        # If supporting an order, update support list.
+        if self.supported_order is not None:
+            self.supported_order.remove_support(self)
+            # If supported order is virtual, try removing that order as well
+            if self.supported_order.virtual:
+                self.supported_order.retract()
+        
+        # If convoying an order, try to retract the convoyed order: if that
+        # succeeds, then self will also be removed.
+        if self.convoyed_order is not None:
+            self.convoyed_order.retract()
+            return
+        
+        # Finally, remove self and all convoys
+        self._full_remove_method(self)
+        # print(self.convoys)
+        for convoy_order in self.convoys:
+            convoy_order._full_remove_method(convoy_order)
+        
+        return
     
-    def update(self):
-        if self.virtual and not self.supports:
-            self.remove()
-    
-    def set_virtual(self, virtual):
+    def set_virtual(self, virtual=True):
         self.virtual = virtual
         self.artist.set_virtual(virtual)
+        for convoy_order in self.convoys:
+            convoy_order.set_virtual(virtual)
     
     def add_support(self, support_order):
         self.supports.append(support_order)
@@ -69,7 +103,19 @@ class Order:
     def remove_support(self, support_order):
         self.supports.remove(support_order)
         self.artist.remove_support(support_order)
-
+    
+    def add_convoy(self, convoy_order):
+        self.convoys.append(convoy_order)
+    
+    def remove_convoy(self, convoy_order):
+        self.convoys.remove(convoy_order)
+    
+    def inherit_convoys(self, other_order):
+        self.convoys = other_order.convoys
+        for convoy in self.convoys:
+            convoy.convoyed_order = self
+            convoy.set_virtual(self.virtual)
+    
 class OrderArtist:
     def __init__(self, order):
         self.patches = []
@@ -99,16 +145,17 @@ class OrderArtist:
 
 class HoldOrder(Order):
     def __init__(self, piece, visualizer, remove_method, virtual=False):
-        super().__init__(piece, visualizer, remove_method, virtual)
+        super().__init__(piece, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
         
+        self.chess_path = ChessPath(piece, piece.square)
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} hold"
     
-    def is_like(self, piece):
-        return self.piece == piece
+    def get_landing_square(self):
+        return self.piece.square
     
     def execute(self, board, console):
         if self.virtual:
@@ -139,24 +186,29 @@ class HoldOrderArtist(OrderArtist):
             patch.set_linestyle(linestyle)
     
     def add_support(self, support_order):
-        junction = support_order.artist.path.vertices[-1]
+        junction = support_order.artist.get_path_end()
         patch = mpl.patches.Circle(junction, radius=self.width, fc="w", ec="k", lw=1.5)
         self.support_patches[support_order] = [patch]
         return self.support_patches[support_order]
 
 class MoveOrder(Order):
     def __init__(self, piece, landing_square, visualizer, remove_method, virtual=False):
-        super().__init__(piece, visualizer, remove_method, virtual)
+        super().__init__(piece, landing_square, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
         
         self.landing_square = landing_square
         self.chess_path = ChessPath(piece, self.landing_square)
+        
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
-        return f"{self.piece} move to {self.landing_square}"
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.piece} move to {self.landing_square}"
     
-    def is_like(self, piece, landing_square):
-        return self.piece == piece and self.landing_square == landing_square
+    def get_landing_square(self):
+        return self.landing_square
+    
+    def get_intermediate_squares(self):
+        return self.chess_path.intermediate_squares
     
     def execute(self, board, console):
         if not self.chess_path.valid:
@@ -197,8 +249,11 @@ class MoveOrderArtist(OrderArtist):
         Get intersection between path and the edge of the landing square
         """
         v0, v1 = self.path.vertices[-2:]
-        direction = (v1 - v0) / np.linalg.norm(v1 - v0)
-        junction = v1 - direction * 0.5 / np.max(np.abs(direction))
+        direction = v1 - v0
+        norm = np.max(np.abs(direction))
+        if norm != 0:
+            direction = direction / norm
+        junction = v1 - direction * 0.5
         return junction
     
     def add_support(self, support_order):
@@ -207,23 +262,110 @@ class MoveOrderArtist(OrderArtist):
         return self.support_patches[support_order]
 
 class ConvoyOrder(Order):
-    pass
-
-class SupportHoldOrder(Order):
-    def __init__(self, piece, supported_order, visualizer, remove_method, virtual=False):
-        super().__init__(piece, visualizer, remove_method, virtual)
+    def __init__(self, piece, square, convoyed_order, visualizer, remove_method, virtual=False):
+        """
+        piece should be None
+        """
+        super().__init__(piece, square, convoyed_order, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
         
-        self.supported_order = supported_order
-        
-        self.chess_path = ChessPath(piece, supported_order.piece.square)
-        
+        self.square = square
+        self.convoyed_order = convoyed_order
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
-        return f"{self.piece} support {self.supported_order}"
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.square} convoy {self.convoyed_order}"
     
-    def is_like(self, piece, supported_order):
-        return self.piece == piece and self.supported_order == supported_order
+    def get_landing_square(self):
+        return self.square
+    
+    def execute(self, board, console):
+        if self.square in self.convoyed_order.get_intermediate_squares():
+            console.out(f"{self.square} convoyed {self.convoyed_order}.")
+            return True
+        console.out(f"{self.square} cannot support {self.convoyed_order}.")
+        return False
+    
+    def update_convoyed_order(self, new_order):# because it can change!
+        self.convoyed_order = new_order
+
+class ConvoyOrderArtist(OrderArtist):
+    def __init__(self, order):
+        super().__init__(order)
+        
+        self.width = .1
+    
+    def set_virtual(self, virtual):
+        linestyle = ":" if virtual else "-"
+        for patch in self.patches:
+            patch.set_linestyle(linestyle)
+    
+    def add_support(self, support_order):
+        junction = support_order.artist.get_path_end()
+        patch = mpl.patches.Circle(junction, radius=self.width, fc="w", ec="k", lw=1.5)
+        self.support_patches[support_order] = [patch]
+        return self.support_patches[support_order]
+
+class SupportOrder(Order):
+    def __init__(self, piece, supported_square, visualizer, remove_method, virtual=False):
+        super().__init__(piece, supported_square, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+        
+        self.supported_square = supported_square
+        self.chess_path = ChessPath(piece, supported_square)
+        self.artist = self.visualizer.make_order_artist(self)
+    
+    def __str__(self):
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.piece} generic support {self.supported_square}"
+    
+    def get_args(self):
+        return (self.piece, self.supported_square)
+    
+    def get_intermediate_squares(self):
+        return self.chess_path.intermediate_squares
+    
+    def is_inheritable(self, piece, supported_order):
+        return piece == self.piece and supported_order.get_landing_square() == self.supported_square
+
+class SupportOrderArtist(OrderArtist):
+    def __init__(self, order):
+        super().__init__(order)
+        self.patch_kwargs = dict(fc="none", joinstyle="round", capstyle="round")
+        if type(self) is SupportOrderArtist:
+            self.patches = self.make_patches(order)
+            self.set_virtual(order.virtual)
+        
+    def make_patches(self, order, **kwargs):
+        patches = []
+        path = order.chess_path.artist.compute_path(**kwargs)
+        patch = mpl.patches.PathPatch(path, ec="k", lw=4, **self.patch_kwargs)
+        patches.append(patch)
+        patch = mpl.patches.PathPatch(path, ec="w", lw=2, **self.patch_kwargs)
+        patches.append(patch)
+        patch = mpl.patches.PathPatch(path, ec=order.piece.power.square_color[0], lw=1, **self.patch_kwargs)
+        patches.append(patch)
+        return patches
+
+    def set_virtual(self, virtual):
+        linestyle = (0, (1, 5)) if virtual else "-"
+        for patch in self.patches:
+            patch.set_linestyle(linestyle)
+    
+    def get_path_end(self):
+        return self.patches[0].get_path().vertices[-1]
+
+class SupportHoldOrder(SupportOrder):
+    def __init__(self, piece, supported_order, visualizer, remove_method, virtual=False):
+        super(SupportOrder, self).__init__(piece, supported_order, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+        
+        self.supported_order = supported_order
+        self.supported_square = self.supported_order.get_landing_square()
+        self.chess_path = ChessPath(piece, self.supported_square)
+        self.artist = self.visualizer.make_order_artist(self)
+    
+    def __str__(self):
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.piece} support {self.supported_order}"
     
     def execute(self, board, console):
         if not self.chess_path.valid:
@@ -232,30 +374,28 @@ class SupportHoldOrder(Order):
         console.out(f"{self.piece} supported {self.supported_order}.")
         return True
 
-class SupportHoldOrderArtist(OrderArtist):
+class SupportHoldOrderArtist(SupportOrderArtist):
     def __init__(self, order):
         super().__init__(order)
         
-        self.path = order.chess_path.artist.compute_path(shrink=order.supported_order.artist.radius)
-        kwargs = dict(fc="none", joinstyle="round", capstyle="round")
-        patch = mpl.patches.PathPatch(self.path, ec="k", lw=4, **kwargs)
-        self.patches.append(patch)
-        patch = mpl.patches.PathPatch(self.path, ec=order.piece.power.square_color[0], lw=2, **kwargs)
-        self.patches.append(patch)
+        self.patches = self.make_patches(order, shrink=order.supported_order.artist.radius)
+        self.set_virtual(order.virtual)
 
-class SupportMoveOrder(Order):
+class SupportMoveOrder(SupportOrder):
     def __init__(self, piece, supported_order, visualizer, remove_method, virtual=False):
-        super().__init__(piece, visualizer, remove_method, virtual)
+        super(SupportOrder, self).__init__(piece, supported_order, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
         
         self.supported_order = supported_order
-        self.chess_path = ChessPath(piece, supported_order.landing_square)
+        self.supported_square = self.supported_order.get_landing_square()
+        self.chess_path = ChessPath(piece, self.supported_square)
         self.artist = self.visualizer.make_order_artist(self)
     
     def __str__(self):
-        return f"{self.piece} support {self.supported_order}"
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.piece} support {self.supported_order}"
     
-    def is_like(self, piece, supported_order):
-        return self.piece == piece and self.supported_order == supported_order
+    def get_intermediate_squares(self):
+        return self.chess_path.intermediate_squares
     
     def execute(self, board, console):
         if not self.chess_path.valid:
@@ -264,23 +404,46 @@ class SupportMoveOrder(Order):
         console.out(f"{self.piece} supported {self.supported_order}.")
         return True
 
-class SupportMoveOrderArtist(OrderArtist):
+class SupportMoveOrderArtist(SupportOrderArtist):
     def __init__(self, order):
         super().__init__(order)
         
-        self.path = order.chess_path.artist.compute_path(support=order.supported_order.artist.junction)
-        kwargs = dict(fc="none", joinstyle="round", capstyle="round")
-        patch = mpl.patches.PathPatch(self.path, ec="k", lw=4, **kwargs)
-        self.patches.append(patch)
-        patch = mpl.patches.PathPatch(self.path, ec=order.piece.power.square_color[0], lw=2, **kwargs)
-        self.patches.append(patch)
+        self.patches = self.make_patches(order, support=order.supported_order.artist.junction)
+        self.set_virtual(order.virtual)
 
-class SupportConvoyOrder(Order):
-    pass
+class SupportConvoyOrder(SupportOrder):
+    def __init__(self, piece, supported_order, visualizer, remove_method, virtual=False):
+        super(SupportOrder, self).__init__(piece, supported_order, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
+        
+        self.supported_order = supported_order
+        self.supported_square = self.supported_order.get_landing_square()
+        self.chess_path = ChessPath(piece, self.supported_square)
+        self.artist = self.visualizer.make_order_artist(self)
+    
+    def __str__(self):
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.piece} support {self.supported_order}"
+    
+    def get_intermediate_squares(self):
+        return self.chess_path.intermediate_squares
+    
+    def execute(self, board, console):
+        if not self.chess_path.valid:
+            console.out(f"{self.piece} cannot support {self.supported_order}.")
+            return False
+        console.out(f"{self.piece} supported {self.supported_order}.")
+        return True
+
+class SupportConvoyOrderArtist(SupportOrderArtist):
+    def __init__(self, order):
+        super().__init__(order)
+        
+        self.patches = self.make_patches(order)
+        self.set_virtual(order.virtual)
 
 class BuildOrder(Order):
     def __init__(self, power, piece_code, square, visualizer, remove_method, virtual=False):
-        super().__init__(None, visualizer, remove_method, virtual)
+        super().__init__(None, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
         
         self.power = power
         self.piece_code = piece_code
@@ -311,7 +474,7 @@ class BuildOrderArtist(OrderArtist):
 
 class DisbandOrder(Order):
     def __init__(self, piece, visualizer, remove_method, virtual=False):
-        super().__init__(piece, visualizer, remove_method, virtual)
+        super().__init__(piece, visualizer=visualizer, remove_method=remove_method, virtual=virtual)
         
         self.artist = self.visualizer.make_order_artist(self)
     
