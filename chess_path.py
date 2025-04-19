@@ -47,17 +47,22 @@ class ChessPath:
                 if (abs(drank) == 2 and abs(dfile) == 1) or (abs(dfile) == 2 and abs(drank) == 1):
                     valid = True
             case Piece.PAWN:
-                if drank == 1 and abs(dfile) <= 1:
-                    valid = True
+                
                 
                 home_rank_pawn = True
-                if self.piece.power.side == Power.WHITE:
-                    home_rank_pawn = land.rank < 2
-                elif self.piece.power.side == Power.BLACK:
-                    home_rank_pawn = land.rank >= 6
-                if home_rank_pawn and drank == 2 and dfile == 0:
-                    intermediate_squares.append(Square(rank=start.rank + 1, file=start.file))
-                    valid = True
+                if piece.power.side == Power.WHITE:
+                    if drank == 1 and abs(dfile) <= 1:
+                        valid = True
+                    elif start.rank < 2 and drank == 2 and dfile == 0:
+                        intermediate_squares.append(Square(rank=start.rank + 1, file=start.file))
+                        valid = True
+                elif piece.power.side == Power.BLACK:
+                    print(drank, dfile, start.rank)
+                    if drank == -1 and abs(dfile) <= 1:
+                        valid = True
+                    elif start.rank >= 6 and drank == -2 and dfile == 0:
+                        intermediate_squares.append(Square(rank=start.rank - 1, file=start.file))
+                        valid = True
             case _:
                 pass
         return valid, intermediate_squares
