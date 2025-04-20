@@ -1,6 +1,6 @@
 # -*-coding:utf8-*-
 
-from chess_path import ChessPath
+from chessdip.board.chess_path import ChessPath
 
 class Order:
     HOLD = 0

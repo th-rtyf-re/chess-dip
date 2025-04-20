@@ -1,13 +1,7 @@
 # -*-coding:utf8-*-
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import numpy as np
-
-from power import Power
-from square import Square
-from piece import *
 
 class ChessPathArtist:
     def __init__(self, chess_path, clockwise=True):

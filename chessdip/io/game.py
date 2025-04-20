@@ -4,18 +4,14 @@ import matplotlib as mpl
 from matplotlib.path import Path
 import numpy as np
 
-from power import Power, Side
-from square import Square
-from piece import Piece
-from board import *
-from visualizer import Visualizer
-from chess_path import *
-from order import *
-from order_artists import *
-from parser import *
+from chessdip.board.square import Square
+from chessdip.board.piece import Piece
+from chessdip.artists.visualizer import Visualizer
+from chessdip.core.order import *
+from chessdip.io.parser import Parser
 
-from order_interface import OrderInterface
-from board_interface import BoardInterface
+from chessdip.interface.order import OrderInterface
+from chessdip.interface.board import BoardInterface
 
 class Console:
     def __init__(self):

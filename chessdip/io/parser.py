@@ -1,6 +1,5 @@
 # -*-coding:utf8-*-
 
-import numpy as np
 import re
 
 class Parser:

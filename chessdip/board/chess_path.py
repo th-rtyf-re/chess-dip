@@ -1,13 +1,8 @@
 # -*-coding:utf8-*-
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib.path import Path
-import numpy as np
-
-from power import Power
-from square import Square
-from piece import *
+from chessdip.board.power import Side
+from chessdip.board.square import Square
+from chessdip.board.piece import Piece
 
 class ChessPath:
     def __init__(self, piece, landing_square):
@@ -48,13 +43,13 @@ class ChessPath:
                 
                 
                 home_rank_pawn = True
-                if piece.power.side == Power.WHITE:
+                if piece.power.side == Side.WHITE:
                     if drank == 1 and abs(dfile) <= 1:
                         valid = True
                     elif start.rank < 2 and drank == 2 and dfile == 0:
                         intermediate_squares.append(Square(rank=start.rank + 1, file=start.file))
                         valid = True
-                elif piece.power.side == Power.BLACK:
+                elif piece.power.side == Side.BLACK:
                     print(drank, dfile, start.rank)
                     if drank == -1 and abs(dfile) <= 1:
                         valid = True

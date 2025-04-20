@@ -4,7 +4,7 @@ import matplotlib as mpl
 from matplotlib.path import Path
 import numpy as np
 
-from piece import Piece
+from chessdip.board.piece import Piece
 
 class PiecePath:
     def pawn_path():

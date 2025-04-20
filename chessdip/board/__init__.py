@@ -1,0 +1,1 @@
+from chessdip.board.power import Power, Side

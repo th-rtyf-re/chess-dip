@@ -1,6 +1,7 @@
 # -*-coding:utf8-*-
 
-from io import GameManager
+from chessdip.io import GameManager
+from chessdip.board import Power, Side
 
 if __name__ == "__main__":
     color_dict = {

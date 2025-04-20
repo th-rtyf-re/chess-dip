@@ -1,8 +1,8 @@
 # -*-coding:utf8-*-
 
-from piece import Piece
-from board import Board
-from board_artist import BoardArtist
+from chessdip.board.piece import Piece
+from chessdip.board.board import Board
+from chessdip.artists.board import BoardArtist
 
 class BoardInterface:
     """

@@ -1,13 +1,9 @@
 # -*-coding:utf8-*-
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib.path import Path
 import numpy as np
 
-from square import Square
-from piece import Piece
-from power import Side
+from chessdip.board.square import Square
 
 class BoardArtist:
     """

@@ -1,13 +1,12 @@
 # -*-coding:utf8-*-
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import numpy as np
 
-from piece import Piece
-from piece_artist import PieceArtist
-from chess_path_artist import ChessPathArtist
+from chessdip.board.piece import Piece
+from chessdip.artists.piece import PieceArtist
+from chessdip.artists.chess_path import ChessPathArtist
 
 class OrderArtist:
     def __init__(self, order):

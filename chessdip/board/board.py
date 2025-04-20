@@ -2,9 +2,8 @@
 
 import numpy as np
 
-from square import Square
-from piece import Piece
-from power import Side
+from chessdip.board.piece import Piece
+from chessdip.board.power import Side
 
 class Board:
     default_sc_mask = np.array([
