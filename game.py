@@ -7,7 +7,7 @@ import numpy as np
 from power import Power
 from square import Square
 from piece import Piece
-from board import Board
+from board import *
 from visualizer import Visualizer
 from chess_path import *
 from order import *
@@ -64,25 +64,29 @@ class OrderManager:
         order_artist = self.visualizer.make_order_artist(order, supported_artist)
         self.artists[order] = order_artist
         self.visualizer.add_artist(order_artist)
+        return order
     
     def remove(self, order):
-        order_artist = self.artists[order]
-        self.visualizer.erase_artist(order_artist)
+        self.artists[order].remove() # From visualizer
         del self.artists[order]
+        self.visualizer.set_stale()
     
     def set_virtual(self, order, virtual=True):
         order.set_virtual(virtual)
-        self.visualizer.set_virtual(self.artists[order], virtual)
-        for convoy_order in order.convoys:
+        self.artists[order].set_virtual(virtual)
+        for convoy_order in order.get_convoys():
             self.set_virtual(convoy_order, virtual)
+        self.visualizer.set_stale()
     
     def add_support(self, order, support_order):
         order.add_support(support_order)
-        self.visualizer.add_support(self.artists[order], self.artists[support_order])
+        self.artists[order].add_support(self.artists[support_order])
+        self.visualizer.set_stale()
     
     def remove_support(self, order, support_order):
         order.remove_support(support_order)
-        self.visualizer.remove_support(self.artists[order], self.artists[support_order])
+        self.artists[order].remove_support(self.artists[support_order])
+        self.visualizer.set_stale()
     
     def add_convoy(self, order, convoy_order):
         order.add_convoy(convoy_order)
@@ -205,6 +209,66 @@ class OrderManager:
         self.add_support(convoy_order, order)
         return order
 
+class BoardManager:
+    """
+    Squares, supply centers, and pieces. Should have the same signature as
+    a Board object
+    """
+    def __init__(self, powers, visualizer):
+        self.visualizer = visualizer
+        
+        self.board = Board(powers)
+        self.board_artist = BoardArtist(self.board)
+        self.visualizer.add_artist(self.board_artist)
+        
+        self.piece_artists = {}
+    
+    def get_pieces(self):
+        return self.piece_artists.keys()
+    
+    def add_piece(self, code, power, square):
+        piece = Piece(code, power, square)
+        self.set_ownership(square, power)
+        piece_artist = self.visualizer.make_piece_artist(piece)
+        self.piece_artists[piece] = piece_artist
+        self.visualizer.add_artist(piece_artist)
+        return piece
+    
+    def remove_piece(self, piece):
+        self.piece_artists[piece].remove()
+        del self.piece_artists[piece]
+        self.visualizer.set_stale()
+    
+    def get_piece(self, square):
+        for piece in self.get_pieces():
+            if piece.get_square() == square:
+                return piece
+        return None
+    
+    def set_ownership(self, square, power):
+        changed = self.board.set_ownership(square, power)
+        if changed:
+            self.board_artist.set_owner(square, power)
+            self.visualizer.set_stale()
+    
+    def set_sc_ownership(self, square, power):
+        changed = self.board.set_sc_ownership(square, power)
+        if changed:
+            self.board_artist.set_sc_owner(square, power)
+            self.visualizer.set_stale()
+    
+    def vacate_square(self, square):
+        for piece in self.get_pieces():
+            if piece.get_square() == square:
+                self.remove_piece(piece)
+                self.visualizer.set_stale()
+    
+    def move_piece_to(self, piece, square):
+        piece.move_to(square)
+        self.piece_artists[piece].move_to(square)
+        self.set_ownership(square, piece.get_power())
+        self.visualizer.set_stale()
+
 class GameManager:
     def __init__(self, powers=None):
         if powers is None:
@@ -214,21 +278,8 @@ class GameManager:
         self.visualizer = Visualizer()
         self.order_manager = OrderManager(self.visualizer)
         self.console = Console()
-        self.board = Board(self.powers, self.visualizer)
-        self.orders = []# including virtual orders and convoy orders, I guess
+        self.board = BoardManager(self.powers, self.visualizer)
         self.parser = Parser(Order)
-        
-        self.order_subclasses = {
-            Order.HOLD: HoldOrder,
-            Order.MOVE: MoveOrder,
-            Order.CONVOY: ConvoyOrder,
-            Order.SUPPORT: SupportOrder,
-            Order.SUPPORT_HOLD: SupportHoldOrder,
-            Order.SUPPORT_MOVE: SupportMoveOrder,
-            Order.SUPPORT_CONVOY: SupportConvoyOrder,
-            Order.BUILD: BuildOrder,
-            Order.DISBAND: DisbandOrder
-        }
     
     def update_view(self):
         self.visualizer.render()
@@ -265,8 +316,9 @@ class GameManager:
         for order, artist in self.order_manager.get_items():
             if not order.get_virtual():
                 order.execute(self.board, self.console)
-            self.visualizer.erase_artist(artist)
+            artist.remove()
         self.order_manager.clear()
+        self.visualizer.set_stale()
     
     def _square(self, square_str):
         """
@@ -357,11 +409,8 @@ class GameManager:
         power = None
         self.visualizer.ion()
         self.visualizer.show()
-        stale = True
         while True:
-            if stale:
-                self.visualizer.render()
-            stale = False
+            self.visualizer.render()
             message = self.console.input("> ").lower().replace(' ', '')
             
             if message in ["exit", "quit"]:
@@ -377,7 +426,6 @@ class GameManager:
                         self.console.out(order)
             elif message == "progress":
                 self.progress()
-                stale = True
             elif message[:len("power")] == "power":
                 power_str = message[len("power"):]
                 try:
@@ -392,7 +440,6 @@ class GameManager:
                 order = self._find_order_on_square(square, virtual=False)
                 if order is not None:
                     self.order_manager.retract(order)
-                    stale = True
             elif message[:len("save")] == "save":
                 filename = message[len("save"):]
                 if not filename:
@@ -403,7 +450,7 @@ class GameManager:
             elif power is None:
                 self.console.out("No power has been selected. Select a power by writing \"power [name]\"")
             else: # Message is an order
-                stale = self._process_order(power, message)
+                self._process_order(power, message)
 
 
 if __name__ == "__main__":

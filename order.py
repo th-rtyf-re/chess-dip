@@ -16,12 +16,6 @@ class Order:
     BUILD = -1
     DISBAND = -2
     
-    support_order_codes = {
-        SUPPORT_HOLD: HOLD,
-        SUPPORT_MOVE: MOVE,
-        SUPPORT_CONVOY: CONVOY
-    }
-    
     def __init__(self, piece, *other_args, virtual=False):
         self.piece = piece
         self.other_args = other_args
@@ -43,20 +37,15 @@ class Order:
     
     def set_virtual(self, virtual=True):
         self.virtual = virtual
-        # self.artist.set_virtual(virtual)
-        # for convoy_order in self.convoys:
-            # convoy_order.set_virtual(virtual)
     
     def get_supports(self):
         return self.supports
     
     def add_support(self, support_order):
         self.supports.append(support_order)
-        # self.visualizer.add_support(self, support_order)
     
     def remove_support(self, support_order):
         self.supports.remove(support_order)
-        # self.artist.remove_support(support_order)
     
     def get_convoys(self):
         return self.convoys

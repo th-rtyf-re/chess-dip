@@ -78,9 +78,9 @@ class ChessPathArtist:
         
         # self.squares = [chess_path.starting_square] + chess_path.intermediate_squares + [chess_path.landing_square]
     
-    def compute_path(self, support=None, shrink=0):
+    def compute_path(self, junction=None, shrink=0):
         if self.chess_path.valid:
-            vertices = self.compute_vertices(support=support, shrink=shrink)
+            vertices = self.compute_vertices(junction=junction, shrink=shrink)
             codes = [Path.MOVETO] + (len(vertices) - 1) * [Path.LINETO]
             path = Path(vertices, codes)
         else:
@@ -90,9 +90,9 @@ class ChessPathArtist:
             path = Path([(x0, y0), last_vertex], [Path.MOVETO, Path.LINETO])
         return path
     
-    def compute_vertices(self, support=None, shrink=0):
+    def compute_vertices(self, junction=None, shrink=0):
         """
-        `support` is the location of the supported order's intersection with
+        `junction` is the location of the supported order's intersection with
         the landing square.
         """
         x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
@@ -109,7 +109,7 @@ class ChessPathArtist:
             x0, y0 = x1, y1
         
         # Landing square
-        if support is None:
+        if junction is None:
             x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
             if abs(x1 - x0) > 1 or abs(y1 - y0) > 1:
                 # if the next square is not adjacent, then we add a connecting path
@@ -120,8 +120,8 @@ class ChessPathArtist:
             last_vertex = self._shrink_line(vertices[-1], (x1, y1), shrink)
             vertices.append(last_vertex)
         else:
-            ax, ay = self._closest_corner((x0, y0), support)
-            connecting_vertices = self._connecting_vertices((ax, ay), support)
+            ax, ay = self._closest_corner((x0, y0), junction)
+            connecting_vertices = self._connecting_vertices((ax, ay), junction)
             vertices.extend(connecting_vertices)
         return vertices
     

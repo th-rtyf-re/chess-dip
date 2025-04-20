@@ -19,24 +19,26 @@ class Piece:
         'K': KING
     }
     
-    def __init__(self, code, power, square, visualizer):
+    def __init__(self, code, power, square):
         self.code = code
         self.power = power
         self.square = square
-        self.visualizer = visualizer
-        
-        self.artist = self.visualizer.make_piece_artist(self)
     
     def __str__(self):
         names = ["Pawn", "Knight", "Bishop", "Rook", "King"]
         return f"{self.power} {names[self.code]} at {self.square}"
     
+    def get_power(self):
+        return self.power
+    
+    def get_square(self):
+        return self.square
+    
     def move_to(self, square):
-        self.visualizer.move_piece(self, square)
         self.square = square
     
     def remove(self):
-        self.visualizer.erase_piece(self)
+        pass
 
 class PiecePath:
     def pawn_path():
@@ -164,45 +166,57 @@ class PieceArtist:
         Piece.KING: PiecePath.king_path()
     }
     
-    def __init__(self, visualizer, piece):
+    def __init__(self, piece):
         self.piece = piece
+        self.ax = None
+        
+        self.kwargs = {"lw": 2, "capstyle": "butt", "joinstyle": "round"}
+        r = .3
+        self.piece_radius = {
+            Piece.PAWN: .2,
+            Piece.KNIGHT: r,
+            Piece.BISHOP: r,
+            Piece.ROOK: r,
+            Piece.KING: r
+        }
         
         self.square = self.piece.square
         self.fc, self.highlight = self.piece.power.piece_color
-        self.kwargs = visualizer.piece_kwargs
         
         self.shift = (-.08, -.02)
         self.path = PieceArtist.piece_path_dict[piece.code]
         
         self.affine_transform = mpl.transforms.Affine2D().translate(self.square.file, self.square.rank)
-        self.scale_transform = mpl.transforms.Affine2D().scale(visualizer.piece_radius[self.piece.code])
-        self.transform = self.scale_transform + self.affine_transform + visualizer.ax.transData
-        self.unshadow_transform = self.scale_transform + mpl.transforms.Affine2D().translate(*self.shift) + self.affine_transform + visualizer.ax.transData
+        self.scale_transform = mpl.transforms.Affine2D().scale(self.piece_radius[self.piece.code])
+        self.transform = self.scale_transform + self.affine_transform
+        self.unshadow_transform = self.scale_transform + mpl.transforms.Affine2D().translate(*self.shift) + self.affine_transform
         
-        self.patches = self._make_patches()
-        self._add_special_patches()
     
     def __str__(self):
         return f"PieceArtist({self.piece})"
     
     def _make_patches(self):
-        piece_patch = mpl.patches.PathPatch(self.path, fc=self.highlight, ec="none", transform=self.transform, **self.kwargs)
+        piece_patch = mpl.patches.PathPatch(self.path, fc=self.highlight, ec="none", transform=self.transform + self.ax.transData, **self.kwargs)
         
-        unshadow_patch = mpl.patches.PathPatch(self.path, fc=self.fc, ec=self.highlight, transform=self.unshadow_transform, **self.kwargs)
+        unshadow_patch = mpl.patches.PathPatch(self.path, fc=self.fc, ec=self.highlight, transform=self.unshadow_transform + self.ax.transData, **self.kwargs)
         unshadow_patch.set_clip_path(piece_patch)
         
-        outline_patch = mpl.patches.PathPatch(self.path, fc="none", ec="k", transform=self.transform, **self.kwargs)
+        outline_patch = mpl.patches.PathPatch(self.path, fc="none", ec="k", transform=self.transform + self.ax.transData, **self.kwargs)
         return [piece_patch, unshadow_patch, outline_patch]
     
     def _add_special_patches(self):
         if self.piece.code == Piece.KNIGHT:
             x, y, r = np.array([-.15, .5, .05])
-            self.patches.append(mpl.patches.Circle((x, y), radius=r, fc="k", ec="k", transform=self.transform, **self.kwargs))
+            self.patches.append(mpl.patches.Circle((x, y), radius=r, fc="k", ec="k", transform=self.transform + self.ax.transData, **self.kwargs))
     
     def get_patches(self):
         return self.patches
     
     def add_to_ax(self, ax):
+        self.ax = ax
+        self.patches = self._make_patches()
+        self._add_special_patches()
+        
         for patch in self.patches:
             ax.add_patch(patch)
     
