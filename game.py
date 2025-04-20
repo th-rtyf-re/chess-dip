@@ -4,7 +4,7 @@ import matplotlib as mpl
 from matplotlib.path import Path
 import numpy as np
 
-from power import Power
+from power import Power, Side
 from square import Square
 from piece import Piece
 from board import *
@@ -24,7 +24,7 @@ class Console:
     def input(self, *args, **kwargs):
         return input(*args, **kwargs)
 
-class OrderManager:
+class OrderInterface:
     """
     Managing orders and their artists
     """
@@ -32,18 +32,6 @@ class OrderManager:
         self.visualizer = visualizer
         self.artists = {}
         
-        self.order_subclasses = {
-            Order.HOLD: HoldOrder,
-            Order.MOVE: MoveOrder,
-            Order.CONVOY: ConvoyOrder,
-            Order.SUPPORT: SupportOrder,
-            Order.SUPPORT_HOLD: SupportHoldOrder,
-            Order.SUPPORT_MOVE: SupportMoveOrder,
-            Order.SUPPORT_CONVOY: SupportConvoyOrder,
-            Order.BUILD: BuildOrder,
-            Order.DISBAND: DisbandOrder
-        }
-    
     def has_orders(self):
         return bool(self.artists)
     
@@ -101,6 +89,23 @@ class OrderManager:
             convoy_order.set_convoyed_order(order)
             convoy_order.set_virtual(order.get_virtual())
     
+class OrderManager(OrderInterface):
+    def __init__(self, visualizer):
+        super().__init__(visualizer)
+        
+        self.order_subclasses = {
+            Order.HOLD: HoldOrder,
+            Order.MOVE: MoveOrder,
+            Order.CONVOY: ConvoyOrder,
+            Order.SUPPORT: SupportOrder,
+            Order.SUPPORT_HOLD: SupportHoldOrder,
+            Order.SUPPORT_MOVE: SupportMoveOrder,
+            Order.SUPPORT_CONVOY: SupportConvoyOrder,
+            Order.BUILD: BuildOrder,
+            Order.DISBAND: DisbandOrder
+        }
+    
+    
     def retract(self, order):
         # If supported by a real order, keep but make virtual
         for support_order in order.get_supports():
@@ -151,18 +156,26 @@ class OrderManager:
         inheritable_order = None
         for other_order in self.get_orders():
             if isinstance(other_order, order_subclass) and args == order_subclass.get_args(other_order):
-                # found matching order
+                # found matching order.
                 order = other_order
                 self.set_virtual(order, order.get_virtual() and virtual)
                 return order
-            elif type(other_order) is SupportOrder and issubclass(order_subclass, SupportOrder) and other_order.is_inheritable(*args):
+            elif isinstance(other_order, SupportOrder) and issubclass(order_subclass, SupportOrder) and other_order.is_inheritable(*args):
                 # found inheritable order
                 inheritable_order = other_order
                 break
         if inheritable_order is not None:
             order = order_subclass(*args, virtual=virtual)
-            self.inherit_convoys(order, other_order)
-            self.remove(inheritable_order)
+            self.inherit_convoys(order, inheritable_order)
+            if type(inheritable_order) is SupportOrder:
+                self.remove(inheritable_order)
+            else:
+                supported_order = inheritable_order.get_supported_order()
+                self.remove_support(supported_order, inheritable_order)
+                if supported_order.get_virtual():
+                    self.retract(supported_order)
+                self.remove(inheritable_order)
+                
             self._clear_conflicting_orders(order)
             self.add(order)
             return order
@@ -209,7 +222,7 @@ class OrderManager:
         self.add_support(convoy_order, order)
         return order
 
-class BoardManager:
+class BoardInterface:
     """
     Squares, supply centers, and pieces. Should have the same signature as
     a Board object
@@ -278,7 +291,7 @@ class GameManager:
         self.visualizer = Visualizer()
         self.order_manager = OrderManager(self.visualizer)
         self.console = Console()
-        self.board = BoardManager(self.powers, self.visualizer)
+        self.board = BoardInterface(self.powers, self.visualizer)
         self.parser = Parser(Order)
         
         self.piece_dict = {
@@ -365,52 +378,60 @@ class GameManager:
             self.console.out("Cannot order another power's piece.")
             return False
         
-        match order_code:
-            case Order.HOLD:
-                self.order_manager.get_order(order_code, (piece,))
-                return True
-            case Order.MOVE:
-                landing_square = self._square(args[1])
-                self.order_manager.get_order(order_code, (piece, landing_square))
-                return True
-            case Order.SUPPORT_HOLD:
-                supported_square = self._square(args[1])
-                supported_piece = self.board.get_piece(supported_square)
-                self.order_manager.get_support_order(order_code, piece, Order.HOLD, (supported_piece,))
-                return True
-            case Order.SUPPORT_MOVE:
-                supported_square = self._square(args[1])
-                supported_piece = self.board.get_piece(supported_square)
-                supported_landing_square = self._square(args[3])
-                self.order_manager.get_support_order(order_code, piece, Order.MOVE, (supported_piece, supported_landing_square))
-                return True
-            case Order.SUPPORT_CONVOY:
-                convoy_square = self._square(args[1])
-                convoy_starting_square = self._square(args[2])
-                convoyed_piece = self.board.get_piece(convoy_starting_square)
-                convoyed_order_code = Order.SUPPORT if args[3] == 's' else Order.MOVE
-                convoy_landing_square = self._square(args[4])
-                _, intermediate_squares = ChessPath.validate_path(convoyed_piece, convoy_starting_square, convoy_landing_square)
-                if convoy_square not in intermediate_squares:
-                    self.console.out("Convoying square cannot convoy along specified path.")
-                    return False
-                self.order_manager.get_support_convoy_order(piece, convoy_square, convoyed_order_code, (convoyed_piece, convoy_landing_square))
-                return True
-            case Order.BUILD:
-                piece_chr = args[1].upper() if args[1] else "P"
-                piece_code = self.piece_dict[piece_chr]
-                order = BuildOrder(power, piece_code, starting_square)
-                self.order_manager._clear_conflicting_orders(order)
-                self.order_manager.add(order)
-                return True
-            case Order.DISBAND:
-                order = DisbandOrder(piece)
-                self.order_manager._clear_conflicting_orders(order)
-                self.order_manager.add(order)
-                return True
-            case _:
-                self.console.out("Unknown error!")
+        if order_code == Order.HOLD:
+            self.order_manager.get_order(order_code, (piece,))
+            return True
+        elif order_code == Order.MOVE:
+            landing_square = self._square(args[1])
+            self.order_manager.get_order(order_code, (piece, landing_square))
+            return True
+        elif order_code == Order.SUPPORT_HOLD:
+            supported_square = self._square(args[1])
+            supported_piece = self.board.get_piece(supported_square)
+            if supported_piece is None:
+                self.console.out(f"No piece on {supported_square} to support.")
                 return False
+            self.order_manager.get_support_order(order_code, piece, Order.HOLD, (supported_piece,))
+            return True
+        elif order_code == Order.SUPPORT_MOVE:
+            supported_square = self._square(args[1])
+            supported_piece = self.board.get_piece(supported_square)
+            supported_landing_square = self._square(args[3])
+            if supported_piece is None:
+                self.console.out(f"No piece on {supported_square} to support.")
+                return False
+            self.order_manager.get_support_order(order_code, piece, Order.MOVE, (supported_piece, supported_landing_square))
+            return True
+        elif order_code == Order.SUPPORT_CONVOY:
+            convoy_square = self._square(args[1])
+            convoy_starting_square = self._square(args[2])
+            convoyed_piece = self.board.get_piece(convoy_starting_square)
+            if convoyed_piece is None:
+                self.console.out(f"No piece on {convoy_starting_square} to support convoy.")
+                return False
+            convoyed_order_code = Order.SUPPORT if args[3] == 's' else Order.MOVE
+            convoy_landing_square = self._square(args[4])
+            _, intermediate_squares = ChessPath.validate_path(convoyed_piece, convoy_starting_square, convoy_landing_square)
+            if convoy_square not in intermediate_squares:
+                self.console.out("Convoying square cannot convoy along specified path.")
+                return False
+            self.order_manager.get_support_convoy_order(piece, convoy_square, convoyed_order_code, (convoyed_piece, convoy_landing_square))
+            return True
+        elif order_code == Order.BUILD:
+            piece_chr = args[1].upper() if args[1] else "P"
+            piece_code = self.piece_dict[piece_chr]
+            order = BuildOrder(power, piece_code, starting_square)
+            self.order_manager._clear_conflicting_orders(order)
+            self.order_manager.add(order)
+            return True
+        elif order_code == Order.DISBAND:
+            order = DisbandOrder(piece)
+            self.order_manager._clear_conflicting_orders(order)
+            self.order_manager.add(order)
+            return True
+        else:
+            self.console.out("Unknown error!")
+            return False
     
     def sandbox(self):
         self.console.out("Beginning sandbox. Awaiting instructions.")
@@ -472,20 +493,23 @@ if __name__ == "__main__":
         "none": ("none", "k")
     }
     powers = [
-        Power(0, "neutral", color_dict["none"], ((175/255, 138/255, 105/255), (237/255, 218/255, 185/255)), 0),
-        Power(1, "England", color_dict["quartz"], ("indianred", "lightsalmon"), -1),
-        Power(2, "Italy", color_dict["opal"], ("forestgreen", "lightgreen"), -1),
-        Power(3, "France", color_dict["obsidian"], ("steelblue", "lightskyblue"), -2),
-        Power(4, "Scandinavia", color_dict["onyx"], ("darkgoldenrod", "palegoldenrod"), -2),
-        Power(-2, "black", color_dict["black"], ("k", "k"), -2),
-        Power(-1, "white", color_dict["white"], ("w", "w"), -1),
+        Power(0, "neutral", color_dict["none"], ((175/255, 138/255, 105/255), (237/255, 218/255, 185/255)), Side.NEUTRAL),
+        Power(1, "England", color_dict["quartz"], ("indianred", "lightsalmon"), Side.WHITE),
+        Power(2, "Italy", color_dict["opal"], ("forestgreen", "lightgreen"), Side.WHITE),
+        Power(3, "France", color_dict["obsidian"], ("steelblue", "lightskyblue"), Side.BLACK),
+        Power(4, "Scandinavia", color_dict["onyx"], ("darkgoldenrod", "palegoldenrod"), Side.BLACK),
+        Power(-2, "black", color_dict["black"], ("k", "k"), Side.BLACK),
+        Power(-1, "white", color_dict["white"], ("w", "w"), Side.WHITE),
     ]
     GM = GameManager(powers)
     GM.setup_pieces(powers[1], ["K d1", "P c2", "N b1", "Ra1"])
     GM.setup_pieces(powers[2], ["K e1", "P e2", "B f1", "Rh1"])
+    # GM.setup_pieces(powers[2], ["K e1", "P e2", "B f1", "Rg1"])
     GM.setup_pieces(powers[3], ["K e8", "P e7", "N g8", "Rh8"])
     GM.setup_pieces(powers[4], ["K d8", "P d7", "B c8", "Ra8"])
     
-    # GM.process_orders(powers[2], ["f1sh3ch1sh8", "h1sh8h"])
+    # GM.process_orders(powers[2], ["f1sh3ch1sh8", "h1sh8h", "h1sa8h8"])
+    # GM.process_orders(powers[2], ["g1sg8ch8f8", "g1sg8ch8sf8", "g1sg8ch8e8"])
+    # GM.process_orders(powers[2], ["g1sg8ch8se8", "g1sg8ch8se8"])
     GM.sandbox()
     

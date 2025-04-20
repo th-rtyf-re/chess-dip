@@ -9,6 +9,7 @@ import numpy as np
 
 from square import Square
 from piece import Piece
+from power import Side
 
 class Board:
     default_sc_mask = np.array([
@@ -32,8 +33,8 @@ class Board:
         self.pieces = []
         self.ownership = np.zeros((8, 8), dtype=int)
         self.sc_ownership = np.zeros((8, 8), dtype=int)# -1 for white, -2 for black
-        self.sc_ownership[:2][self.sc_mask[:2]] = -1
-        self.sc_ownership[-2:][self.sc_mask[-2:]] = -2
+        self.sc_ownership[:2][self.sc_mask[:2]] = Side.WHITE
+        self.sc_ownership[-2:][self.sc_mask[-2:]] = Side.BLACK
         
     def set_ownership(self, square, power):
         old_code = self.ownership[square.rank, square.file]

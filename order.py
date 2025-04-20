@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from square import Square
 from piece import *
 from chess_path import *
 
@@ -172,8 +173,11 @@ class SupportOrder(Order):
     def get_intermediate_squares(self):
         return self.chess_path.intermediate_squares
     
-    def is_inheritable(self, piece, supported_order):
-        return piece == self.piece and supported_order.get_landing_square() == self.supported_square
+    def is_inheritable(self, piece, support_arg):
+        try:
+            return piece == self.piece and support_arg.get_landing_square() == self.supported_square
+        except AttributeError:
+            return piece == self.piece and support_arg == self.supported_square
 
 class SupportHoldOrder(SupportOrder):
     def __init__(self, piece, supported_order, virtual=False):
@@ -186,6 +190,9 @@ class SupportHoldOrder(SupportOrder):
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} support {self.supported_order}"
+    
+    def get_args(self):
+        return (self.piece, self.supported_order)
     
     def execute(self, board, console):
         if not self.chess_path.valid:
@@ -205,6 +212,9 @@ class SupportMoveOrder(SupportOrder):
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} support {self.supported_order}"
+    
+    def get_args(self):
+        return (self.piece, self.supported_order)
     
     def get_intermediate_squares(self):
         return self.chess_path.intermediate_squares
@@ -227,6 +237,9 @@ class SupportConvoyOrder(SupportOrder):
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} support {self.supported_order}"
+    
+    def get_args(self):
+        return (self.piece, self.supported_order)
     
     def get_intermediate_squares(self):
         return self.chess_path.intermediate_squares

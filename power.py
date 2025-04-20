@@ -1,11 +1,13 @@
 # -*-coding:utf8-*-
 
-class Power:
-    # Sides
+from enum import Enum
+
+class Side(Enum):
     NEUTRAL = 0
     WHITE = -1
     BLACK = -2
-    
+
+class Power:
     def __init__(self, code, name, piece_color, square_color, side):
         self.code = code
         self.name = name
