@@ -22,6 +22,8 @@ class Order:
         self.convoys = []
         self.supported_order = None
         self.convoyed_order = None
+        
+        self.success = True
     
     def __str__(self):
         pass
@@ -77,6 +79,15 @@ class Order:
     def execute(self, board, console):
         return False
     
+    def set_success(self, success):
+        self.success = success
+    
+    def get_success(self):
+        return self.success
+    
+    def evaluate(self):
+        pass
+    
 class HoldOrder(Order):
     def __init__(self, piece, virtual=False):
         super().__init__(piece, virtual=virtual)
@@ -92,6 +103,9 @@ class HoldOrder(Order):
     
     def execute(self, board, console):
         if self.virtual:
+            return False
+        elif not self.success:
+            console.out(f"{self.piece} failed to hold.")
             return False
         console.out(f"{self.piece} held.")
         return True
@@ -114,7 +128,12 @@ class MoveOrder(Order):
         return self.chess_path.intermediate_squares
     
     def execute(self, board, console):
-        if not self.chess_path.valid:
+        if self.virtual:
+            return False
+        elif not self.success:
+            console.out(f"{self.piece} failed to move.")
+            return False
+        elif not self.chess_path.valid:
             console.out(f"{self.piece} cannot move to {self.landing_square}.")
             return False
         other_piece = board.get_piece(self.landing_square)
@@ -143,7 +162,12 @@ class ConvoyOrder(Order):
         return self.square
     
     def execute(self, board, console):
-        if self.square in self.convoyed_order.get_intermediate_squares():
+        if self.virtual:
+            return False
+        elif not self.success:
+            console.out(f"{self.piece} failed to convoy.")
+            return False
+        elif self.square in self.convoyed_order.get_intermediate_squares():
             console.out(f"{self.square} convoyed {self.convoyed_order}.")
             return True
         console.out(f"{self.square} cannot support {self.convoyed_order}.")
@@ -191,7 +215,12 @@ class SupportHoldOrder(SupportOrder):
         return (self.piece, self.supported_order)
     
     def execute(self, board, console):
-        if not self.chess_path.valid:
+        if self.virtual:
+            return False
+        elif not self.success:
+            console.out(f"{self.piece} failed to support {self.supported_order}.")
+            return False
+        elif not self.chess_path.valid:
             console.out(f"{self.piece} cannot support {self.supported_order}.")
             return False
         console.out(f"{self.piece} supported {self.supported_order}.")
@@ -216,7 +245,12 @@ class SupportMoveOrder(SupportOrder):
         return self.chess_path.intermediate_squares
     
     def execute(self, board, console):
-        if not self.chess_path.valid:
+        if self.virtual:
+            return False
+        elif not self.success:
+            console.out(f"{self.piece} failed to support {self.supported_order}.")
+            return False
+        elif not self.chess_path.valid:
             console.out(f"{self.piece} cannot support {self.supported_order}.")
             return False
         console.out(f"{self.piece} supported {self.supported_order}.")
@@ -241,7 +275,12 @@ class SupportConvoyOrder(SupportOrder):
         return self.chess_path.intermediate_squares
     
     def execute(self, board, console):
-        if not self.chess_path.valid:
+        if self.virtual:
+            return False
+        elif not self.success:
+            console.out(f"{self.piece} failed to support {self.supported_order}.")
+            return False
+        elif not self.chess_path.valid:
             console.out(f"{self.piece} cannot support {self.supported_order}.")
             return False
         console.out(f"{self.piece} supported {self.supported_order}.")

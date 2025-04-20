@@ -9,6 +9,7 @@ from chessdip.board.piece import Piece
 from chessdip.artists.visualizer import Visualizer
 from chessdip.core.order import *
 from chessdip.io.parser import Parser
+from chessdip.core.adjudicator import Adjudicator
 
 from chessdip.interface.order import OrderInterface
 from chessdip.interface.board import BoardInterface
@@ -207,6 +208,10 @@ class GameManager:
                         return order
         return None
     
+    def adjudicate(self):
+        adjudicator = Adjudicator(self.order_manager)
+        adjudicator.adjudicate()
+    
     def progress(self):
         for order, artist in self.order_manager.get_items():
             if not order.get_virtual():
@@ -327,6 +332,8 @@ class GameManager:
                     self.console.out("Current orders:")
                     for order in self.order_manager.get_orders():
                         self.console.out(order)
+            elif message == "adjudicate"[:len(message)]:
+                self.adjudicate()
             elif message == "progress":
                 self.progress()
             elif message[:len("power")] == "power":

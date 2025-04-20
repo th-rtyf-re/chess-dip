@@ -64,3 +64,8 @@ class OrderInterface:
         for convoy_order in convoys:
             convoy_order.set_convoyed_order(order)
             convoy_order.set_virtual(order.get_virtual())
+    
+    def set_success(self, order, success):
+        order.set_success(success)
+        self.artists[order].set_success(success)
+        self.visualizer.set_stale()

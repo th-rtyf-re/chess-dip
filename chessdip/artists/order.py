@@ -70,6 +70,10 @@ class OrderArtist:
         linestyles = self.virtual_lss if virtual else ["-"] * len(self.patches)
         for patch, ls in zip(self.patches, linestyles):
             patch.set_linestyle(ls)
+    
+    def set_success(self, success):
+        if self.patches:
+            self.patches[0].set_ec("k" if success else "r")
 
 class HoldOrderArtist(OrderArtist):
     def __init__(self, order):
