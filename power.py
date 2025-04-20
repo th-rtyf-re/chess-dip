@@ -1,8 +1,8 @@
 # -*-coding:utf8-*-
 
-from enum import Enum
+from enum import IntEnum
 
-class Side(Enum):
+class Side(IntEnum):
     NEUTRAL = 0
     WHITE = -1
     BLACK = -2
