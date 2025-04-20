@@ -4,8 +4,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-from piece import Piece, PieceArtist
-from board import BoardArtist
+from piece import Piece
+from piece_artist import PieceArtist
+from board_artist import BoardArtist
 from order import *
 from order_artists import *
 

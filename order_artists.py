@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import numpy as np
 
-from piece import *
-from chess_path import *
+from piece import Piece
+from piece_artist import PieceArtist
+from chess_path_artist import ChessPathArtist
 
 class OrderArtist:
     def __init__(self, order):
@@ -88,7 +89,7 @@ class MoveOrderArtist(OrderArtist):
     def __init__(self, order):
         super().__init__(order)
         
-        self.path = order.chess_path.artist.compute_path()
+        self.path = ChessPathArtist(order.chess_path).compute_path()
         arrow_style = mpl.patches.ArrowStyle("->", head_length=.2)
         arrow_paths, _ = arrow_style.transmute(self.path, mutation_size=1, linewidth=0)
         arrow_path = Path.make_compound_path(*arrow_paths)
@@ -127,7 +128,7 @@ class SupportOrderArtist(OrderArtist):
         self.supported_artist = supported_artist
                 
         if type(self) is SupportOrderArtist:
-            path = order.chess_path.artist.compute_path()
+            path = ChessPathArtist(order.chess_path).compute_path()
             self.make_path_patches(path)
             self.set_virtual(order.virtual)
         
@@ -138,7 +139,7 @@ class SupportHoldOrderArtist(SupportOrderArtist):
     def __init__(self, order, supported_artist):
         super().__init__(order, supported_artist)
         
-        path = order.chess_path.artist.compute_path(shrink=self.supported_artist.radius)
+        path = ChessPathArtist(order.chess_path).compute_path(shrink=self.supported_artist.radius)
         self.make_path_patches(path)
         self.set_virtual(order.virtual)
 
@@ -147,7 +148,7 @@ class SupportMoveOrderArtist(SupportOrderArtist):
         super().__init__(order, supported_artist)
         
         junction = self.supported_artist._get_support_junction(self)
-        path = order.chess_path.artist.compute_path(junction=junction)
+        path = ChessPathArtist(order.chess_path).compute_path(junction=junction)
         self.make_path_patches(path)
         self.set_virtual(order.virtual)
 
@@ -155,7 +156,7 @@ class SupportConvoyOrderArtist(SupportOrderArtist):
     def __init__(self, order, supported_artist):
         super().__init__(order, supported_artist)
         
-        path = order.chess_path.artist.compute_path()
+        path = ChessPathArtist(order.chess_path).compute_path()
         self.make_path_patches(path)
         self.set_virtual(order.virtual)
 

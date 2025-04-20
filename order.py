@@ -1,10 +1,6 @@
 # -*-coding:utf8-*-
 
-import numpy as np
-
-from square import Square
-from piece import *
-from chess_path import *
+from chess_path import ChessPath
 
 class Order:
     HOLD = 0

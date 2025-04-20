@@ -14,6 +14,9 @@ from order import *
 from order_artists import *
 from parser import *
 
+from order_interface import OrderInterface
+from board_interface import BoardInterface
+
 class Console:
     def __init__(self):
         pass
@@ -23,71 +26,6 @@ class Console:
     
     def input(self, *args, **kwargs):
         return input(*args, **kwargs)
-
-class OrderInterface:
-    """
-    Managing orders and their artists
-    """
-    def __init__(self, visualizer):
-        self.visualizer = visualizer
-        self.artists = {}
-        
-    def has_orders(self):
-        return bool(self.artists)
-    
-    def get_orders(self):
-        return self.artists.keys()
-    
-    def get_items(self):
-        return self.artists.items()
-    
-    def clear(self):
-        self.artists.clear()
-    
-    def add(self, order):
-        supported_order = order.get_supported_order()
-        supported_artist = None
-        if supported_order is not None:
-            supported_artist = self.artists[supported_order]
-        order_artist = self.visualizer.make_order_artist(order, supported_artist)
-        self.artists[order] = order_artist
-        self.visualizer.add_artist(order_artist)
-        return order
-    
-    def remove(self, order):
-        self.artists[order].remove() # From visualizer
-        del self.artists[order]
-        self.visualizer.set_stale()
-    
-    def set_virtual(self, order, virtual=True):
-        order.set_virtual(virtual)
-        self.artists[order].set_virtual(virtual)
-        for convoy_order in order.get_convoys():
-            self.set_virtual(convoy_order, virtual)
-        self.visualizer.set_stale()
-    
-    def add_support(self, order, support_order):
-        order.add_support(support_order)
-        self.artists[order].add_support(self.artists[support_order])
-        self.visualizer.set_stale()
-    
-    def remove_support(self, order, support_order):
-        order.remove_support(support_order)
-        self.artists[order].remove_support(self.artists[support_order])
-        self.visualizer.set_stale()
-    
-    def add_convoy(self, order, convoy_order):
-        order.add_convoy(convoy_order)
-    
-    def remove_convoy(self, order, convoy_order):
-        order.remove_convoy(convoy_order)
-    
-    def inherit_convoys(self, order, other_order):
-        convoys = other_order.get_convoys()
-        order.set_convoys(convoys)
-        for convoy_order in convoys:
-            convoy_order.set_convoyed_order(order)
-            convoy_order.set_virtual(order.get_virtual())
     
 class OrderManager(OrderInterface):
     def __init__(self, visualizer):
@@ -221,66 +159,6 @@ class OrderManager(OrderInterface):
         order = self.get_order(Order.SUPPORT_CONVOY, (piece, convoy_order), virtual=virtual)
         self.add_support(convoy_order, order)
         return order
-
-class BoardInterface:
-    """
-    Squares, supply centers, and pieces. Should have the same signature as
-    a Board object
-    """
-    def __init__(self, powers, visualizer):
-        self.visualizer = visualizer
-        
-        self.board = Board(powers)
-        self.board_artist = BoardArtist(self.board)
-        self.visualizer.add_artist(self.board_artist)
-        
-        self.piece_artists = {}
-    
-    def get_pieces(self):
-        return self.piece_artists.keys()
-    
-    def add_piece(self, code, power, square):
-        piece = Piece(code, power, square)
-        self.set_ownership(square, power)
-        piece_artist = self.visualizer.make_piece_artist(piece)
-        self.piece_artists[piece] = piece_artist
-        self.visualizer.add_artist(piece_artist)
-        return piece
-    
-    def remove_piece(self, piece):
-        self.piece_artists[piece].remove()
-        del self.piece_artists[piece]
-        self.visualizer.set_stale()
-    
-    def get_piece(self, square):
-        for piece in self.get_pieces():
-            if piece.get_square() == square:
-                return piece
-        return None
-    
-    def set_ownership(self, square, power):
-        changed = self.board.set_ownership(square, power)
-        if changed:
-            self.board_artist.set_owner(square, power)
-            self.visualizer.set_stale()
-    
-    def set_sc_ownership(self, square, power):
-        changed = self.board.set_sc_ownership(square, power)
-        if changed:
-            self.board_artist.set_sc_owner(square, power)
-            self.visualizer.set_stale()
-    
-    def vacate_square(self, square):
-        for piece in self.get_pieces():
-            if piece.get_square() == square:
-                self.remove_piece(piece)
-                self.visualizer.set_stale()
-    
-    def move_piece_to(self, piece, square):
-        piece.move_to(square)
-        self.piece_artists[piece].move_to(square)
-        self.set_ownership(square, piece.get_power())
-        self.visualizer.set_stale()
 
 class GameManager:
     def __init__(self, powers=None):
