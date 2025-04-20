@@ -19,8 +19,10 @@ class OrderArtist:
         self.patch_kwargs = dict(fc="none", joinstyle="round", capstyle="projecting")
         self.support_kwargs = dict(radius=.1, fc="w", ec="k", lw=1.5, zorder=1.5)
     
-    def _add_patch(self, patch):
-        self.ax.add_patch(patch)
+    def _add_patches(self, patches):
+        if self.ax is not None:
+            for patch in patches:
+                self.ax.add_patch(patch)
     
     def add_to_ax(self, ax):
         self.ax = ax
@@ -48,8 +50,7 @@ class OrderArtist:
         junction = self._get_support_junction(support_artist)
         patch = mpl.patches.Circle(junction, **self.support_kwargs)
         self.support_patches[support_artist] = [patch]
-        for patch in self.support_patches[support_artist]:
-            self._add_patch(patch)
+        self._add_patches(self.support_patches[support_artist])
     
     def _get_support_junction(self, support_artist):
         pass
