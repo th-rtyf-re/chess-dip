@@ -11,14 +11,6 @@ class Piece:
     ROOK = 3
     KING = 4
     
-    piece_dict = {
-        'P': PAWN,
-        'N': KNIGHT,
-        'B': BISHOP,
-        'R': ROOK,
-        'K': KING
-    }
-    
     def __init__(self, code, power, square):
         self.code = code
         self.power = power
