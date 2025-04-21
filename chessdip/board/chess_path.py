@@ -50,7 +50,6 @@ class ChessPath:
                         intermediate_squares.append(Square(rank=start.rank + 1, file=start.file))
                         valid = True
                 elif piece.power.side == Side.BLACK:
-                    print(drank, dfile, start.rank)
                     if drank == -1 and abs(dfile) <= 1:
                         valid = True
                     elif start.rank >= 6 and drank == -2 and dfile == 0:
