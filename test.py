@@ -1,6 +1,6 @@
 # -*-coding:utf8-*-
 
-from chessdip.io import GameManager
+from chessdip.ui import GameManager
 from chessdip.board import Power, Side
 
 if __name__ == "__main__":
