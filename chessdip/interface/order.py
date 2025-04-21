@@ -1,5 +1,7 @@
 # -*-coding:utf8-*-
 
+from chessdip.core.order import *
+
 class OrderInterface:
     """
     Managing orders and their artists
@@ -69,3 +71,18 @@ class OrderInterface:
         order.set_success(success)
         self.artists[order].set_success(success)
         self.visualizer.set_stale()
+    
+    def get_other_opposing(self, order):
+        """
+        Get other orders with the same landing square.
+        """
+        ret = []
+        for other_order in self.get_orders():
+            if (other_order is not order
+                and other_order.get_landing_square() == order.get_landing_square()
+                and not other_order.get_virtual()
+                and isinstance(other_order, HoldOrder | MoveOrder | ConvoyOrder)
+            ):
+                ret.append(other_order)
+        return ret
+                    
