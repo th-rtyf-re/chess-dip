@@ -18,12 +18,12 @@ class BoardArtist:
         self.light_mask[1::2, 1::2] = False
         
         self.sc_xshift, self.sc_yshift = -.35, -.35
-        self.sc_radius = .08
+        self.sc_kwargs = dict(radius=.08, ec="k", lw=1.5)
         
         self.square_artists = np.full((8, 8), None, dtype=object)
         self.sc_artists = np.full((8, 8), None, dtype=object)
     
-    def add_to_ax(self, ax):
+    def add_to_ax(self, ax, zorder=1.):
         self.ax = ax
         self.ax.tick_params(bottom=False, top=False, left=False, right=False)
         self.ax.set_xticks([0, 1, 2, 3, 4, 5, 6, 7], ["a", "b", "c", "d", "e", "f", "g", "h"])
@@ -32,8 +32,8 @@ class BoardArtist:
         self.ax.set_xlim(-.5, 7.5)
         self.ax.set_ylim(-.5, 7.5)
         
-        self.populate_square_artists(self.square_artists)
-        self.populate_sc_artists(self.sc_artists)
+        self.populate_square_artists(self.square_artists, zorder=zorder)
+        self.populate_sc_artists(self.sc_artists, zorder=zorder)
         for square_artist in self.square_artists.flat:
             if square_artist is not None:
                 self.ax.add_patch(square_artist)
@@ -41,28 +41,28 @@ class BoardArtist:
             if sc_artist is not None:
                 self.ax.add_patch(sc_artist)
     
-    def populate_square_artists(self, square_artists):
+    def populate_square_artists(self, square_artists, zorder=1.):
         for rank in range(8):
             for file in range(8):
-                patch = self.make_square_patch(Square(rank=rank, file=file))
+                patch = self.make_square_patch(Square(rank=rank, file=file), zorder=zorder)
                 square_artists[rank, file] = patch
     
-    def populate_sc_artists(self, sc_artists):
+    def populate_sc_artists(self, sc_artists, zorder=1.):
         for rank, file in zip(*self.board.sc_mask.nonzero()):
             power = self.board.powers[self.board.sc_ownership[rank, file]]
-            patch = self.make_sc_patch(Square(rank=rank, file=file), power)
+            patch = self.make_sc_patch(Square(rank=rank, file=file), power, zorder=zorder)
             sc_artists[rank, file] = patch
     
-    def make_square_patch(self, square):
+    def make_square_patch(self, square, zorder=1.):
         rank, file = square.rank, square.file
         fc = self.get_square_fc(square, self.board.powers[0])
-        patch = mpl.patches.Rectangle((file - .5, rank - .5), 1, 1, fc=fc, ec="none")
+        patch = mpl.patches.Rectangle((file - .5, rank - .5), 1, 1, fc=fc, ec="none", zorder=zorder)
         return patch
     
-    def make_sc_patch(self, square, power):
+    def make_sc_patch(self, square, power, zorder=1.):
         rank, file = square.rank, square.file
         fc = self.get_square_fc(square, power)
-        patch = mpl.patches.Circle((file + self.sc_xshift, rank + self.sc_yshift), radius=self.sc_radius, fc=fc, ec="k", lw=1.5)
+        patch = mpl.patches.Circle((file + self.sc_xshift, rank + self.sc_yshift), fc=fc, **self.sc_kwargs, zorder=zorder)
         return patch
     
     def get_square_fc(self, square, power):

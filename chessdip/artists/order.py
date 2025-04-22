@@ -18,21 +18,23 @@ class OrderArtist:
         self.children_artists = []
         self.patch_kwargs = dict(fc="none", joinstyle="round", capstyle="projecting")
         self.support_kwargs = dict(radius=.1, fc="w", ec="k", lw=1.5, zorder=1.5)
+        self.virtual = False
     
     def _add_patches(self, patches):
         if self.ax is not None:
             for patch in patches:
                 self.ax.add_patch(patch)
     
-    def add_to_ax(self, ax):
+    def add_to_ax(self, ax, zorder=1.):
         self.ax = ax
         for patch in self.patches:
+            patch.set_zorder(zorder)
             self.ax.add_patch(patch)
         for patches in self.support_patches.values():
             for patch in patches:
                 self.ax.add_patch(patch)
         for artist in self.children_artists:
-            artist.add_to_ax(self.ax)
+            artist.add_to_ax(self.ax, zorder=zorder)
     
     def remove(self):
         for patch in self.patches:
@@ -66,7 +68,11 @@ class OrderArtist:
             patch = mpl.patches.PathPatch(path, ec=ec, lw=lw, **self.patch_kwargs)
             self.patches.append(patch)
     
+    def get_virtual(self):
+        return self.virtual
+    
     def set_virtual(self, virtual):
+        self.virtual = virtual
         linestyles = self.virtual_lss if virtual else ["-"] * len(self.patches)
         for patch, ls in zip(self.patches, linestyles):
             patch.set_linestyle(ls)

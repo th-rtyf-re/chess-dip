@@ -61,5 +61,24 @@ class VisualInterface:
             raise ValueError(f"No artist for {order}!")
     
     def add_artist(self, artist):
-        artist.add_to_ax(self.ax)
+        artist.add_to_ax(self.ax, zorder=self._get_zorder(artist))
         self.stale = True
+    
+    def _get_zorder(self, artist):
+        if isinstance(artist, BoardArtist):
+            return 1.
+        elif isinstance(artist, PieceArtist):
+            return 1.1
+        elif isinstance(artist, HoldOrderArtist):
+            if not artist.get_virtual():
+                return 1.2
+            else:
+                return 1.25
+        elif isinstance(artist, OrderArtist):
+            if not artist.get_virtual():
+                return 1.3
+            else:
+                return 1.35
+        else:
+            return 1.
+        

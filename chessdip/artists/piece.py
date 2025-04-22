@@ -135,8 +135,8 @@ class PieceArtist:
     def __init__(self, piece):
         self.piece = piece
         self.ax = None
-        
-        self.kwargs = {"lw": 2, "capstyle": "butt", "joinstyle": "round"}
+    
+        self.kwargs = dict(lw= 2, capstyle="butt", joinstyle="round")
         r = .3
         self.piece_radius = {
             Piece.PAWN: .2,
@@ -161,27 +161,27 @@ class PieceArtist:
     def __str__(self):
         return f"PieceArtist({self.piece})"
     
-    def _make_patches(self):
-        piece_patch = mpl.patches.PathPatch(self.path, fc=self.highlight, ec="none", transform=self.transform + self.ax.transData, **self.kwargs)
+    def _make_patches(self, zorder=1.):
+        piece_patch = mpl.patches.PathPatch(self.path, fc=self.highlight, ec="none", transform=self.transform + self.ax.transData, **self.kwargs, zorder=zorder)
         
-        unshadow_patch = mpl.patches.PathPatch(self.path, fc=self.fc, ec=self.highlight, transform=self.unshadow_transform + self.ax.transData, **self.kwargs)
+        unshadow_patch = mpl.patches.PathPatch(self.path, fc=self.fc, ec=self.highlight, transform=self.unshadow_transform + self.ax.transData, **self.kwargs, zorder=zorder)
         unshadow_patch.set_clip_path(piece_patch)
         
-        outline_patch = mpl.patches.PathPatch(self.path, fc="none", ec="k", transform=self.transform + self.ax.transData, **self.kwargs)
+        outline_patch = mpl.patches.PathPatch(self.path, fc="none", ec="k", transform=self.transform + self.ax.transData, **self.kwargs, zorder=zorder)
         return [piece_patch, unshadow_patch, outline_patch]
     
-    def _add_special_patches(self):
+    def _add_special_patches(self, zorder=1.):
         if self.piece.code == Piece.KNIGHT:
             x, y, r = np.array([-.15, .5, .05])
-            self.patches.append(mpl.patches.Circle((x, y), radius=r, fc="k", ec="k", transform=self.transform + self.ax.transData, **self.kwargs))
+            self.patches.append(mpl.patches.Circle((x, y), radius=r, fc="k", ec="k", transform=self.transform + self.ax.transData, **self.kwargs, zorder=zorder))
     
     def get_patches(self):
         return self.patches
     
-    def add_to_ax(self, ax):
+    def add_to_ax(self, ax, zorder=1.):
         self.ax = ax
-        self.patches = self._make_patches()
-        self._add_special_patches()
+        self.patches = self._make_patches(zorder=zorder)
+        self._add_special_patches(zorder=zorder)
         
         for patch in self.patches:
             ax.add_patch(patch)
