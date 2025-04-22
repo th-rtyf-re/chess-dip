@@ -62,7 +62,9 @@ class OrderArtist:
 
     def make_path_patches(self, path, n=None):
         self.ecs = ["k", self.order.piece.power.square_color[0], "w"]
-        self.virtual_lss = [(0, (3 / lw, 5 / lw)) for lw in self.lws]
+        dash_on = self.lws[0]
+        dash_off = 1.5 * dash_on
+        self.virtual_lss = [(0, (dash_on / lw, dash_off / lw)) for lw in self.lws]
         
         if n is None:
             n = len(self.ecs)
@@ -101,7 +103,7 @@ class MoveOrderArtist(OrderArtist):
         super().__init__(order, global_kwargs)
         
         self.path = ChessPathArtist(order.chess_path).compute_path()
-        arrow_style = mpl.patches.ArrowStyle("->", head_length=.2)
+        arrow_style = mpl.patches.ArrowStyle("->", head_width=.2, head_length=.2)
         arrow_paths, _ = arrow_style.transmute(self.path, mutation_size=1, linewidth=0)
         arrow_path = Path.make_compound_path(*arrow_paths)
         self.make_path_patches(arrow_path, 2)

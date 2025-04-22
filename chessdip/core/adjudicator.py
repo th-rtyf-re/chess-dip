@@ -83,7 +83,7 @@ class Adjudicator:
     
     def _adjudicate_move(self, order):
         resolution, state = self._check_convoys(order)
-        if state:
+        if state == State.RESOLVED:
             return resolution, state
         return resolution, state
     
