@@ -201,6 +201,8 @@ class GameManager:
         """
         power_name is assumed lowercase
         """
+        if not power_name:
+            raise ValueError(f"Could not find power {power_name}!")
         for power in self.powers:
             full_name = power.name.lower()
             if len(power_name) <= len(full_name) and full_name[:len(power_name)] == power_name:
