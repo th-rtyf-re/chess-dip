@@ -9,15 +9,18 @@ from chessdip.artists.piece import PieceArtist
 from chessdip.artists.chess_path import ChessPathArtist
 
 class OrderArtist:
-    def __init__(self, order):
+    def __init__(self, order, global_kwargs):
         self.order = order
         self.ax = None
         self.supported_artist = None
         self.patches = []
         self.support_patches = {}
         self.children_artists = []
-        self.patch_kwargs = dict(fc="none", joinstyle="round", capstyle="projecting")
-        self.support_kwargs = dict(radius=.1, fc="w", ec="k", lw=1.5, zorder=1.5)
+        self.patch_kwargs = dict(fc="none", joinstyle="round", capstyle="round")
+        self.support_kwargs = dict(radius=global_kwargs["dot_radius"], fc="w", ec="k", lw=1.5 * global_kwargs["edge_width"], zorder=1.5)
+        lw0 = global_kwargs["path_width"] + global_kwargs["edge_width"]
+        lw1 = global_kwargs["path_width"] - global_kwargs["edge_width"]
+        self.lws = [lw0, lw1, lw1 / 3]
         self.virtual = False
     
     def _add_patches(self, patches):
@@ -59,7 +62,6 @@ class OrderArtist:
 
     def make_path_patches(self, path, n=None):
         self.ecs = ["k", self.order.piece.power.square_color[0], "w"]
-        self.lws = [4, 2, .5]
         self.virtual_lss = [(0, (3 / lw, 5 / lw)) for lw in self.lws]
         
         if n is None:
@@ -82,8 +84,8 @@ class OrderArtist:
             self.patches[0].set_ec("k" if success else "r")
 
 class HoldOrderArtist(OrderArtist):
-    def __init__(self, order):
-        super().__init__(order)
+    def __init__(self, order, global_kwargs):
+        super().__init__(order, global_kwargs)
         
         self.radius = .4
         center = order.piece.square.file, order.piece.square.rank
@@ -95,8 +97,8 @@ class HoldOrderArtist(OrderArtist):
         return support_artist.get_path_end()
 
 class MoveOrderArtist(OrderArtist):
-    def __init__(self, order):
-        super().__init__(order)
+    def __init__(self, order, global_kwargs):
+        super().__init__(order, global_kwargs)
         
         self.path = ChessPathArtist(order.chess_path).compute_path()
         arrow_style = mpl.patches.ArrowStyle("->", head_length=.2)
@@ -122,8 +124,8 @@ class MoveOrderArtist(OrderArtist):
         return self.junction
 
 class ConvoyOrderArtist(OrderArtist):
-    def __init__(self, order):
-        super().__init__(order)
+    def __init__(self, order, global_kwargs):
+        super().__init__(order, global_kwargs)
     
     def set_virtual(self, virtual):
         return
@@ -132,8 +134,8 @@ class ConvoyOrderArtist(OrderArtist):
         return support_artist.get_path_end()
 
 class SupportOrderArtist(OrderArtist):
-    def __init__(self, order, supported_artist):
-        super().__init__(order)
+    def __init__(self, order, supported_artist, global_kwargs):
+        super().__init__(order, global_kwargs)
         self.supported_artist = supported_artist
                 
         if type(self) is SupportOrderArtist:
@@ -145,16 +147,16 @@ class SupportOrderArtist(OrderArtist):
         return self.patches[0].get_path().vertices[-1]
 
 class SupportHoldOrderArtist(SupportOrderArtist):
-    def __init__(self, order, supported_artist):
-        super().__init__(order, supported_artist)
+    def __init__(self, order, supported_artist, global_kwargs):
+        super().__init__(order, supported_artist, global_kwargs)
         
         path = ChessPathArtist(order.chess_path).compute_path(shrink=self.supported_artist.radius)
         self.make_path_patches(path)
         self.set_virtual(order.virtual)
 
 class SupportMoveOrderArtist(SupportOrderArtist):
-    def __init__(self, order, supported_artist):
-        super().__init__(order, supported_artist)
+    def __init__(self, order, supported_artist, global_kwargs):
+        super().__init__(order, supported_artist, global_kwargs)
         
         junction = self.supported_artist._get_support_junction(self)
         path = ChessPathArtist(order.chess_path).compute_path(junction=junction)
@@ -162,28 +164,28 @@ class SupportMoveOrderArtist(SupportOrderArtist):
         self.set_virtual(order.virtual)
 
 class SupportConvoyOrderArtist(SupportOrderArtist):
-    def __init__(self, order, supported_artist):
-        super().__init__(order, supported_artist)
+    def __init__(self, order, supported_artist, global_kwargs):
+        super().__init__(order, supported_artist, global_kwargs)
         
         path = ChessPathArtist(order.chess_path).compute_path()
         self.make_path_patches(path)
         self.set_virtual(order.virtual)
 
 class BuildOrderArtist(OrderArtist):
-    def __init__(self, order):
-        super().__init__(order)
+    def __init__(self, order, global_kwargs):
+        super().__init__(order, global_kwargs)
         
         square = order.square
         rank, file = square.rank, square.file
         patch = mpl.patches.Circle((square.file, square.rank), radius=.45, fc="none", ec="k", ls=":", lw=1, capstyle="butt")
         piece = Piece(order.piece_code, order.power, order.square)
-        piece_artist = PieceArtist(piece)
+        piece_artist = PieceArtist(piece, global_kwargs)
         self.patches.append(patch)
         self.children_artists.append(piece_artist)
 
 class DisbandOrderArtist(OrderArtist):
-    def __init__(self, order):
-        super().__init__(order)
+    def __init__(self, order, global_kwargs):
+        super().__init__(order, global_kwargs)
         
         square = order.piece.square
         rank, file = square.rank, square.file

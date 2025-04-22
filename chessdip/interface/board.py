@@ -2,7 +2,6 @@
 
 from chessdip.board.piece import Piece
 from chessdip.board.board import Board
-from chessdip.artists.board import BoardArtist
 
 class BoardInterface:
     """
@@ -13,7 +12,7 @@ class BoardInterface:
         self.visualizer = visualizer
         
         self.board = Board(powers)
-        self.board_artist = BoardArtist(self.board)
+        self.board_artist = self.visualizer.make_board_artist(self.board)
         self.visualizer.add_artist(self.board_artist)
         
         self.piece_artists = {}

@@ -132,18 +132,18 @@ class PieceArtist:
         Piece.KING: PiecePath.king_path()
     }
     
-    def __init__(self, piece):
+    def __init__(self, piece, global_kwargs):
         self.piece = piece
         self.ax = None
     
-        self.kwargs = dict(lw= 2, capstyle="butt", joinstyle="round")
-        r = .3
+        self.kwargs = dict(lw=2 * global_kwargs["edge_width"], capstyle="butt", joinstyle="round")
+        self.r = global_kwargs["piece_radius"]
         self.piece_radius = {
-            Piece.PAWN: .2,
-            Piece.KNIGHT: r,
-            Piece.BISHOP: r,
-            Piece.ROOK: r,
-            Piece.KING: r
+            Piece.PAWN: 2 / 3 * self.r,
+            Piece.KNIGHT: self.r,
+            Piece.BISHOP: self.r,
+            Piece.ROOK: self.r,
+            Piece.KING: self.r
         }
         
         self.square = self.piece.square
@@ -172,8 +172,8 @@ class PieceArtist:
     
     def _add_special_patches(self, zorder=1.):
         if self.piece.code == Piece.KNIGHT:
-            x, y, r = np.array([-.15, .5, .05])
-            self.patches.append(mpl.patches.Circle((x, y), radius=r, fc="k", ec="k", transform=self.transform + self.ax.transData, **self.kwargs, zorder=zorder))
+            x, y, r = -.15, .5, self.r / 2
+            self.patches.append(mpl.patches.Circle((x, y), radius=r, fc="k", ec="none", transform=self.transform + self.ax.transData, **self.kwargs, zorder=zorder))
     
     def get_patches(self):
         return self.patches

@@ -8,6 +8,25 @@ from chessdip.artists.board import BoardArtist
 from chessdip.core.order import *
 from chessdip.artists.order import *
 
+class LineDataUnits(mpl.lines.Line2D):
+    def __init__(self, *args, **kwargs):
+        _lw_data = kwargs.pop("linewidth", 1) 
+        super().__init__(*args, **kwargs)
+        self._lw_data = _lw_data
+
+    def _get_lw(self):
+        if self.axes is not None:
+            ppd = 72./self.axes.figure.dpi
+            trans = self.axes.transData.transform
+            return ((trans((1, self._lw_data))-trans((0, 0)))*ppd)[1]
+        else:
+            return 1
+
+    def _set_lw(self, lw):
+        self._lw_data = lw
+
+    _linewidth = property(_get_lw, _set_lw)
+
 class VisualInterface:
     """
     The figure/axes of the game instance. Also makes artists.
@@ -16,6 +35,13 @@ class VisualInterface:
         mpl.rcParams['toolbar'] = 'None'
         self.fig, self.ax = plt.subplots(1, 1, layout="tight")
         self.stale = False
+        
+        self.global_kwargs = dict(
+            path_width=4,
+            edge_width=1,
+            piece_radius=.3,
+            dot_radius=.1
+        )
     
     def set_stale(self, stale=True):
         self.stale = stale
@@ -35,28 +61,31 @@ class VisualInterface:
             self.fig.canvas.flush_events()
             self.stale = False
     
+    def make_board_artist(self, board):
+        return BoardArtist(board, self.global_kwargs)
+    
     def make_piece_artist(self, piece):
-        return PieceArtist(piece)
+        return PieceArtist(piece, self.global_kwargs)
     
     def make_order_artist(self, order, supported_artist):
         if isinstance(order, HoldOrder):
-            return HoldOrderArtist(order)
+            return HoldOrderArtist(order, self.global_kwargs)
         elif isinstance(order, MoveOrder):
-            return MoveOrderArtist(order)
+            return MoveOrderArtist(order, self.global_kwargs)
         elif isinstance(order, ConvoyOrder):
-            return ConvoyOrderArtist(order)
+            return ConvoyOrderArtist(order, self.global_kwargs)
         elif isinstance(order, SupportHoldOrder):
-            return SupportHoldOrderArtist(order, supported_artist)
+            return SupportHoldOrderArtist(order, supported_artist, self.global_kwargs)
         elif isinstance(order, SupportMoveOrder):
-            return SupportMoveOrderArtist(order, supported_artist)
+            return SupportMoveOrderArtist(order, supported_artist, self.global_kwargs)
         elif isinstance(order, SupportConvoyOrder):
-            return SupportConvoyOrderArtist(order, supported_artist)
+            return SupportConvoyOrderArtist(order, supported_artist, self.global_kwargs)
         elif isinstance(order, SupportOrder):
-            return SupportOrderArtist(order, supported_artist)
+            return SupportOrderArtist(order, supported_artist, self.global_kwargs)
         elif isinstance(order, BuildOrder):
-            return BuildOrderArtist(order)
+            return BuildOrderArtist(order, self.global_kwargs)
         elif isinstance(order, DisbandOrder):
-            return DisbandOrderArtist(order)
+            return DisbandOrderArtist(order, self.global_kwargs)
         else:
             raise ValueError(f"No artist for {order}!")
     
