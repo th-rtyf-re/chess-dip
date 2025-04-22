@@ -98,6 +98,9 @@ class HoldOrder(Order):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} hold"
     
+    def get_starting_square(self):
+        return self.piece.square
+    
     def get_landing_square(self):
         return self.piece.square
     
@@ -120,6 +123,9 @@ class MoveOrder(Order):
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} move to {self.landing_square}"
+    
+    def get_starting_square(self):
+        return self.piece.square
     
     def get_landing_square(self):
         return self.landing_square
@@ -189,6 +195,9 @@ class SupportOrder(Order):
         Manual overwrite
         """
         return (self.piece, self.supported_square)
+    
+    def get_starting_square(self):
+        return self.piece.square
     
     def get_intermediate_squares(self):
         return self.chess_path.intermediate_squares

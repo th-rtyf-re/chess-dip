@@ -81,7 +81,7 @@ class OrderInterface:
             if (other_order is not order
                 and other_order.get_landing_square() == order.get_landing_square()
                 and not other_order.get_virtual()
-                and isinstance(other_order, HoldOrder | MoveOrder | ConvoyOrder)
+                and isinstance(other_order, MoveOrder | ConvoyOrder)
             ):
                 ret.append(other_order)
         return ret

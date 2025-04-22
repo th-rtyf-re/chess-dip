@@ -226,11 +226,16 @@ class GameManager:
         adjudicator.adjudicate()
     
     def _add_holds(self):
+        """
+        Add holds for unordered pieces, and make holds with at least one
+        real support real.
+        """
         has_order = {piece: False for piece in self.board.get_pieces()}
         for order in self.order_manager.get_orders():
-            piece = order.get_piece()
-            if piece is not None:
-                has_order[piece] = True
+            if not order.get_virtual():
+                piece = order.get_piece()
+                if piece is not None:
+                    has_order[piece] = True
         for piece, b in has_order.items():
             if not b:
                 self.order_manager.get_order(Order.HOLD, (piece,))
