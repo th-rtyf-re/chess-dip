@@ -31,27 +31,27 @@ class Adjudicator:
     
     def _resolve(self, order):
         if self.states[order] == State.RESOLVED:
-            return self.resolutions[order], True
+            return self.resolutions[order], State.RESOLVED
         elif self.states[order] == State.GUESSING:
             if order not in self.dependencies:
                 self.dependencies.append(order)
-            return self.resolutions[order], False
+            return self.resolutions[order], State.GUESSING
         
         # Otherwise, make a guess
         self.resolutions[order] = False
         self.states[order] = State.GUESSING
         old_dep_length = len(self.dependencies)
-        fail_guess_resolution, resolved = self._adjudicate_with_guesses(order)
+        fail_guess_resolution, state = self._adjudicate_with_guesses(order)
         
-        if resolved:
+        if state == State.RESOLVED:
             if self.states[order] != State.RESOLVED:
                 self.resolutions[order] = fail_guess_resolution
                 self.states[order] = State.RESOLVED
-            return self.resolutions[order], True
+            return self.resolutions[order], State.RESOLVED
         elif order not in self.dependencies[old_dep_length:]:
             self.dependencies.append(order)
             self.resolutions[order] = fail_guess_resolution
-            return self.resolutions[order], False
+            return self.resolutions[order], State.GUESSING
         
         # Other guess
         for other_order in self.dependencies[old_dep_length:]:
@@ -66,7 +66,7 @@ class Adjudicator:
                 self.resolutions[other_order] = State.UNRESOLVED
             self.resolutions[order] = fail_guess_result
             self.states[order] = State.RESOLVED
-            return self.resolutions[order], True
+            return self.resolutions[order], State.RESOLVED
         
         # Backup rule
         self._backup_rule(self.dependencies[old_dep_length:])
@@ -82,50 +82,52 @@ class Adjudicator:
             raise ValueError("Adjudicating unexpected type!")
     
     def _adjudicate_move(self, order):
-        resolution, resolved = self._check_convoys(order)
-        if resolved:
-            return resolution, resolved
-        return resolution, resolved
+        resolution, state = self._check_convoys(order)
+        if state:
+            return resolution, state
+        return resolution, state
     
     def _adjudicate_support(self, order):
-        return True, False
+        return True, State.GUESSING
     
     def _check_convoys(self, order):
         """
         Returns:
         -------
         - convoys_ok: bool.
-        - resolved: bool.
+        - state: bool.
         """
-        convoys_ok, resolved = True, False
+        convoys_ok, state = True, State.GUESSING
         for convoy_order in order.get_convoys():
             convoy_strength, _ = self._get_convoy_strength(convoy_order)
             other_orders = self.order_interface.get_other_opposing(convoy_order)
             for other_order in other_orders:
                 if isinstance(other_order, HoldOrder):
-                    return False, True
+                    return False, State.RESOLVED
                 elif isinstance(other_order, ConvoyOrder):
-                    other_convoy_strength, other_resolved = self._get_convoy_strength(other_order)
-                    if other_convoy_strength > convoy_strength:
-                        return False, other_resolved
+                    other_convoy_strength, other_state = self._get_convoy_strength(other_order)
+                    if other_convoy_strength > convoy_strength and other_state == State.RESOLVED:
+                        return False, State.RESOLVED
+                    elif other_convoy_strength > convoy_strength:
+                        convoys_ok = False
                 elif isinstance(other_order, MoveOrder):
-                    other_resolution, other_resolved = self._resolve(other_order)
-                    if other_resolution and other_resolved:
-                        return False, True
+                    other_resolution, other_state = self._resolve(other_order)
+                    if other_resolution and other_state == State.RESOLVED:
+                        return False, State.RESOLVED
                     elif other_resolution:
                         convoys_ok = False
-        return convoys_ok, resolved
+        return convoys_ok, state
     
     def _get_convoy_strength(self, order):
-        resolved = True
+        state = State.RESOLVED
         strength = 0
         for other_order in order.get_supports():
-            other_resolution, other_resolved = self._resolve(other_order)
+            other_resolution, other_state = self._resolve(other_order)
             if other_resolution:
                 strength += 1
-            if not other_resolved:
-                resolved = False
-        return strength, resolved
+            if other_state != State.RESOLVED:
+                state = State.GUESSING
+        return strength, state
     
     def _backup_rule(self, orders):
         for order in orders:
