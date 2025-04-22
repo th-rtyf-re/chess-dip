@@ -5,6 +5,7 @@ from matplotlib.path import Path
 import numpy as np
 
 from chessdip.board.square import Square
+from chessdip.board.power import Power, Side
 from chessdip.board.piece import Piece
 from chessdip.core.order import *
 from chessdip.core.adjudicator import Adjudicator
@@ -158,15 +159,14 @@ class OrderManager(OrderInterface):
         return order
 
 class GameManager:
-    def __init__(self, powers=None):
+    def __init__(self):
         self.powers = [
             Power(0, "neutral", ("none", "k"), ((175/255, 138/255, 105/255), (237/255, 218/255, 185/255)), Side.NEUTRAL),
             Power(-2, "black", ("k", "k"), ("k", "k"), Side.BLACK),
             Power(-1, "white", ("w", "w"), ("w", "w"), Side.WHITE),
         ]
         
-        if powers is not None:
-            self.powers.extend(powers)
+        self._next_power_code = 1
         self.visualizer = VisualInterface()
         self.order_manager = OrderManager(self.visualizer)
         self.console = Console()
@@ -180,6 +180,12 @@ class GameManager:
             'R': Piece.ROOK,
             'K': Piece.KING
         }
+    
+    def add_power(self, *args, **kwargs):
+        power = Power(self._next_power_code, *args, **kwargs)
+        self.powers.append(power)
+        self._next_power_code += 1
+        return power
     
     def update_view(self):
         self.visualizer.render()
