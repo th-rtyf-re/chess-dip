@@ -11,8 +11,6 @@ class ChessPathArtist:
         self.chess_path = chess_path
         self.clockwise = clockwise
         
-        # self.squares = [chess_path.starting_square] + chess_path.intermediate_squares + [chess_path.landing_square]
-    
     def compute_path(self, junction=None, shrink=0):
         if self.chess_path.valid:
             vertices = self.compute_vertices(junction=junction, shrink=shrink)

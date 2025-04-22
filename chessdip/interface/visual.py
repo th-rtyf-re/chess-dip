@@ -8,7 +8,7 @@ from chessdip.artists.board import BoardArtist
 from chessdip.core.order import *
 from chessdip.artists.order import *
 
-class Visualizer:
+class VisualInterface:
     """
     The figure/axes of the game instance. Also makes artists.
     """

@@ -6,13 +6,13 @@ import numpy as np
 
 from chessdip.board.square import Square
 from chessdip.board.piece import Piece
-from chessdip.artists.visualizer import Visualizer
 from chessdip.core.order import *
-from chessdip.ui.parser import Parser
 from chessdip.core.adjudicator import Adjudicator
+from chessdip.ui.parser import Parser
 
-from chessdip.interface.order import OrderInterface
 from chessdip.interface.board import BoardInterface
+from chessdip.interface.order import OrderInterface
+from chessdip.interface.visual import VisualInterface
 
 class Console:
     def __init__(self):
@@ -163,7 +163,7 @@ class GameManager:
             self.powers = []
         else:
             self.powers = powers
-        self.visualizer = Visualizer()
+        self.visualizer = VisualInterface()
         self.order_manager = OrderManager(self.visualizer)
         self.console = Console()
         self.board = BoardInterface(self.powers, self.visualizer)
