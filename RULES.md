@@ -177,7 +177,7 @@ The path of a move or support order is successful if there are no intermediate s
 **Strength** is a number associated to a square or order:
 
 - Squares have a **hold** strength.
-- Attack and travel orders have an **attack** strength, a **defend** strength, and a **prevent** strength.  
+- Attack and travel orders have an **attack** strength, a **defend** strength, and a **prevent** strength.
 - Convoy orders have a **convoy** strength and a **prevent** strength.
 
 A **head-to-head battle** is a pair of move orders from different powers where the starting square of one order is the landing square of the other, and vice-versa. Note that head-to-head battles cannot involve intermediate squares: due to the way pieces move, any such intermediate square would receive multiple convoy orders, making at least one of the two moves fail immediately.
