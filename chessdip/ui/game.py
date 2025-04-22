@@ -159,10 +159,14 @@ class OrderManager(OrderInterface):
 
 class GameManager:
     def __init__(self, powers=None):
-        if powers is None:
-            self.powers = []
-        else:
-            self.powers = powers
+        self.powers = [
+            Power(0, "neutral", ("none", "k"), ((175/255, 138/255, 105/255), (237/255, 218/255, 185/255)), Side.NEUTRAL),
+            Power(-2, "black", ("k", "k"), ("k", "k"), Side.BLACK),
+            Power(-1, "white", ("w", "w"), ("w", "w"), Side.WHITE),
+        ]
+        
+        if powers is not None:
+            self.powers.extend(powers)
         self.visualizer = VisualInterface()
         self.order_manager = OrderManager(self.visualizer)
         self.console = Console()

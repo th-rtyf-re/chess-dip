@@ -14,13 +14,13 @@ if __name__ == "__main__":
         "none": ("none", "k")
     }
     powers = [
-        Power(0, "neutral", color_dict["none"], ((175/255, 138/255, 105/255), (237/255, 218/255, 185/255)), Side.NEUTRAL),
+        # Power(0, "neutral", color_dict["none"], ((175/255, 138/255, 105/255), (237/255, 218/255, 185/255)), Side.NEUTRAL),
         Power(1, "England", color_dict["quartz"], ("indianred", "lightsalmon"), Side.WHITE),
         Power(2, "Italy", color_dict["opal"], ("forestgreen", "lightgreen"), Side.WHITE),
         Power(3, "France", color_dict["obsidian"], ("steelblue", "lightskyblue"), Side.BLACK),
         Power(4, "Scandinavia", color_dict["onyx"], ("darkgoldenrod", "palegoldenrod"), Side.BLACK),
-        Power(-2, "black", color_dict["black"], ("k", "k"), Side.BLACK),
-        Power(-1, "white", color_dict["white"], ("w", "w"), Side.WHITE),
+        # Power(-2, "black", color_dict["black"], ("k", "k"), Side.BLACK),
+        # Power(-1, "white", color_dict["white"], ("w", "w"), Side.WHITE),
     ]
     GM = GameManager(powers)
     GM.setup_pieces(powers[1], ["K d1", "P c2", "N b1", "Ra1"])
