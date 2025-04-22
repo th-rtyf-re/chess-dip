@@ -214,6 +214,9 @@ class SupportHoldOrder(SupportOrder):
     def get_args(self):
         return (self.piece, self.supported_order)
     
+    def get_landing_square(self):
+        return self.supported_square
+    
     def execute(self, board, console):
         if self.virtual:
             return False
@@ -244,6 +247,9 @@ class SupportMoveOrder(SupportOrder):
     def get_intermediate_squares(self):
         return self.chess_path.intermediate_squares
     
+    def get_landing_square(self):
+        return self.supported_square
+    
     def execute(self, board, console):
         if self.virtual:
             return False
@@ -273,6 +279,9 @@ class SupportConvoyOrder(SupportOrder):
     
     def get_intermediate_squares(self):
         return self.chess_path.intermediate_squares
+    
+    def get_landing_square(self):
+        return self.supported_square
     
     def execute(self, board, console):
         if self.virtual:

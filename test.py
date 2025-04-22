@@ -28,4 +28,5 @@ if __name__ == "__main__":
     # GM.process_orders(powers[2], ["f1sh3ch1sh8", "h1sh8h", "h1sa8h8"])
     # GM.process_orders(powers[2], ["g1sg8ch8f8", "g1sg8ch8sf8", "g1sg8ch8e8"])
     # GM.process_orders(powers[2], ["g1sg8ch8se8", "g1sg8ch8se8"])
+    # GM.process_orders(italy, ["h1sh8h", "f1sh3ch1sh8", "f1sh3ch1h8", "h1h8"])
     GM.sandbox()

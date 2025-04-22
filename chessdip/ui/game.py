@@ -95,6 +95,8 @@ class OrderManager(OrderInterface):
                 # found matching order.
                 order = other_order
                 self.set_virtual(order, order.get_virtual() and virtual)
+                if not order.get_virtual():
+                    self._clear_conflicting_orders(order)
                 return order
             elif isinstance(other_order, SupportOrder) and issubclass(order_subclass, SupportOrder) and other_order.is_inheritable(*args):
                 # found inheritable order
@@ -124,16 +126,14 @@ class OrderManager(OrderInterface):
             return order
     
     def _clear_conflicting_orders(self, order):
-        """
-        Does not work for clearing convoy orders, although this function
-        should never be used for that
-        """
+        if isinstance(order, ConvoyOrder):
+            return
         conflicting_orders = []
         for other_order in self.get_orders():
-            if other_order.get_piece() == order.get_piece() and not other_order.get_virtual() and not order.get_virtual():
+            if other_order is not order and other_order.get_piece() == order.get_piece() and not other_order.get_virtual() and not order.get_virtual():
                 conflicting_orders.append(other_order)
-        for order in conflicting_orders:
-            self.retract(order)
+        for other_order in conflicting_orders:
+            self.retract(other_order)
     
     def add_convoys(self, order):
         """
