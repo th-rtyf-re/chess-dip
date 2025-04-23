@@ -181,7 +181,7 @@ class GameManager:
         for notation in notations:
             instruc = notation.replace(" ", "")
             piece_code = self.piece_dict[instruc[0]]
-            square = self._square(instruc[1:3])
+            square = self.parser.square(instruc[1:3])
             self.board.add_piece(piece_code, power, square)
     
     def _get_power(self, power_name):

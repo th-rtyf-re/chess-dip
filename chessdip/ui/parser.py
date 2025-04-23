@@ -2,6 +2,7 @@
 
 import re
 
+from chessdip.board.square import Square
 from chessdip.core.order import *
 
 class Parser:
@@ -76,12 +77,17 @@ class Parser:
         else:
             return None, tuple()
     
+    def square(self, square_str):
+        if len(square_str) < 2:
+            return None
+        if square_str[0] not in "abcdefgh" or square_str[1] not in "12345678":
+            raise ValueError(f"Cannot parse square {square_str}")
+        return _square(square_str)
+    
 def _square(square_str):
     """
     Assume that `square_str` is a valid input.
     """
-    if len(square_str) < 2:
-        return None
     file = ord(square_str[0]) - ord('a')
     rank = int(square_str[1]) - 1
     return Square(file=file, rank=rank)
