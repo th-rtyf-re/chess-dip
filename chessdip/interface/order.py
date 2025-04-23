@@ -16,11 +16,11 @@ class OrderInterface:
     def get_orders(self):
         return self.artists.keys()
     
-    def get_items(self):
-        return self.artists.items()
-    
     def clear(self):
+        for _, artist in self.artists.items():
+            artist.remove()
         self.artists.clear()
+        self.visualizer.set_stale()
     
     def add(self, order):
         supported_order = order.get_supported_order()
@@ -73,18 +73,3 @@ class OrderInterface:
         for convoy_order in order.get_convoys():
             self.set_success(convoy_order, success)
         self.visualizer.set_stale()
-    
-    def get_other_opposing(self, order):
-        """
-        Get other orders with the same landing square.
-        """
-        ret = []
-        for other_order in self.get_orders():
-            if (other_order is not order
-                and other_order.get_landing_square() == order.get_landing_square()
-                and not other_order.get_virtual()
-                and isinstance(other_order, MoveOrder | ConvoyOrder)
-            ):
-                ret.append(other_order)
-        return ret
-                    

@@ -54,7 +54,7 @@ class OrderManager(OrderInterface):
                     self.remove(order)
                     self.add(generic_support_order)
                 else: # Move order: make virtual
-                    order.set_virtual()
+                    self.set_virtual(order)
                 return
         
         # If convoying an order, try to retract the convoyed order: if that
@@ -238,12 +238,10 @@ class GameManager:
             self.order_manager.add(order)
     
     def progress(self):
-        for order, artist in self.order_manager.get_items():
+        for order in self.order_manager.get_orders():
             if not order.get_virtual():
                 order.execute(self.board, self.console)
-            artist.remove()
         self.order_manager.clear()
-        self.visualizer.set_stale()
     
     def _square(self, square_str):
         """
