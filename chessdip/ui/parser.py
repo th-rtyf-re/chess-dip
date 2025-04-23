@@ -3,6 +3,7 @@
 import re
 
 from chessdip.board.square import Square
+from chessdip.board.piece import Piece
 from chessdip.core.order import *
 
 class Parser:
