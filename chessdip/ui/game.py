@@ -28,19 +28,6 @@ class Console:
 class OrderManager(OrderInterface):
     def __init__(self, visualizer):
         super().__init__(visualizer)
-        
-        self.order_subclasses = {
-            Order.HOLD: HoldOrder,
-            Order.MOVE: MoveOrder,
-            Order.CONVOY: ConvoyOrder,
-            Order.SUPPORT: SupportOrder,
-            Order.SUPPORT_HOLD: SupportHoldOrder,
-            Order.SUPPORT_MOVE: SupportMoveOrder,
-            Order.SUPPORT_CONVOY: SupportConvoyOrder,
-            Order.BUILD: BuildOrder,
-            Order.DISBAND: DisbandOrder
-        }
-    
     
     def retract(self, order):
         # If supported by a real order, keep but make virtual
@@ -83,27 +70,27 @@ class OrderManager(OrderInterface):
             self.remove(convoy_order)
         return
     
-    def get_order(self, order_code, args, virtual=False):
+    def get_order(self, order_class, args, virtual=False):
         """
         args is what is used to construct the order.
         """
-        order_subclass = self.order_subclasses[order_code]
+        # order_subclass = self.order_subclasses[order_code]
         # find matching order
         inheritable_order = None
         for other_order in self.get_orders():
-            if isinstance(other_order, order_subclass) and args == order_subclass.get_args(other_order):
+            if isinstance(other_order, order_class) and args == order_class.get_args(other_order):
                 # found matching order.
                 order = other_order
                 self.set_virtual(order, order.get_virtual() and virtual)
                 if not order.get_virtual():
                     self._clear_conflicting_orders(order)
                 return order
-            elif isinstance(other_order, SupportOrder) and issubclass(order_subclass, SupportOrder) and other_order.is_inheritable(*args):
+            elif isinstance(other_order, SupportOrder) and issubclass(order_class, SupportOrder) and other_order.is_inheritable(*args):
                 # found inheritable order
                 inheritable_order = other_order
                 break
         if inheritable_order is not None:
-            order = order_subclass(*args, virtual=virtual)
+            order = order_class(*args, virtual=virtual)
             self.inherit_convoys(order, inheritable_order)
             if type(inheritable_order) is SupportOrder:
                 self.remove(inheritable_order)
@@ -119,7 +106,7 @@ class OrderManager(OrderInterface):
             return order
         else:
             # no match: make new order
-            order = order_subclass(*args, virtual=virtual)
+            order = order_class(*args, virtual=virtual)
             self._clear_conflicting_orders(order)
             self.add(order)
             self.add_convoys(order)
@@ -145,16 +132,16 @@ class OrderManager(OrderInterface):
             self.add(convoy_order)
             self.add_convoy(order, convoy_order)
     
-    def get_support_order(self, order_code, piece, supported_order_code, supported_order_args, virtual=False):
+    def get_support_order(self, order_class, piece, supported_order_code, supported_order_args, virtual=False):
         supported_order = self.get_order(supported_order_code, supported_order_args, virtual=True)
-        order = self.get_order(order_code, (piece, supported_order), virtual=virtual)
+        order = self.get_order(order_class, (piece, supported_order), virtual=virtual)
         self.add_support(supported_order, order)
         return order
     
-    def get_support_convoy_order(self, piece, convoy_square, convoyed_order_code, convoyed_order_args, virtual=False):
-        convoyed_order = self.get_order(convoyed_order_code, convoyed_order_args, virtual=True)
-        convoy_order = self.get_order(Order.CONVOY, (None, convoy_square, convoyed_order), virtual=True)
-        order = self.get_order(Order.SUPPORT_CONVOY, (piece, convoy_order), virtual=virtual)
+    def get_support_convoy_order(self, piece, convoy_square, convoyed_order_class, convoyed_order_args, virtual=False):
+        convoyed_order = self.get_order(convoyed_order_class, convoyed_order_args, virtual=True)
+        convoy_order = self.get_order(ConvoyOrder, (None, convoy_square, convoyed_order), virtual=True)
+        order = self.get_order(SupportConvoyOrder, (piece, convoy_order), virtual=virtual)
         self.add_support(convoy_order, order)
         return order
 
@@ -245,7 +232,7 @@ class GameManager:
                 self.order_manager.set_virtual(order, False)
         for piece, b in has_order.items():
             if b == 0:
-                self.order_manager.get_order(Order.HOLD, (piece,))
+                self.order_manager.get_order(HoldOrder, (piece,))
     
     def _make_disbands(self):
         disband_orders = []
@@ -286,14 +273,14 @@ class GameManager:
         We allow orders along illegal chess paths, but we do not allow
         illegal implicit convoy orders.
         """
-        order_code, args = self.parser.parse(message)
-        if order_code is None:
+        order_class, args = self.parser.parse(message)
+        if order_class is None:
             self.console.out("Could not parse order.")
             return False
         
         starting_square = self._square(args[0])
         piece = self.board.get_piece(starting_square)
-        if order_code == Order.BUILD:
+        if order_class is BuildOrder:
             pass
         elif piece is None:
             self.console.out(f"No piece on {starting_square}.")
@@ -302,53 +289,53 @@ class GameManager:
             self.console.out("Cannot order another power's piece.")
             return False
         
-        if order_code == Order.HOLD:
-            self.order_manager.get_order(order_code, (piece,))
+        if order_class is HoldOrder:
+            self.order_manager.get_order(order_class, (piece,))
             return True
-        elif order_code == Order.MOVE:
+        elif order_class is MoveOrder:
             landing_square = self._square(args[1])
-            self.order_manager.get_order(order_code, (piece, landing_square))
+            self.order_manager.get_order(order_class, (piece, landing_square))
             return True
-        elif order_code == Order.SUPPORT_HOLD:
+        elif order_class is SupportHoldOrder:
             supported_square = self._square(args[1])
             supported_piece = self.board.get_piece(supported_square)
             if supported_piece is None:
                 self.console.out(f"No piece on {supported_square} to support.")
                 return False
-            self.order_manager.get_support_order(order_code, piece, Order.HOLD, (supported_piece,))
+            self.order_manager.get_support_order(order_class, piece, HoldOrder, (supported_piece,))
             return True
-        elif order_code == Order.SUPPORT_MOVE:
+        elif order_class is SupportMoveOrder:
             supported_square = self._square(args[1])
             supported_piece = self.board.get_piece(supported_square)
             supported_landing_square = self._square(args[3])
             if supported_piece is None:
                 self.console.out(f"No piece on {supported_square} to support.")
                 return False
-            self.order_manager.get_support_order(order_code, piece, Order.MOVE, (supported_piece, supported_landing_square))
+            self.order_manager.get_support_order(order_class, piece, MoveOrder, (supported_piece, supported_landing_square))
             return True
-        elif order_code == Order.SUPPORT_CONVOY:
+        elif order_class is SupportConvoyOrder:
             convoy_square = self._square(args[1])
             convoy_starting_square = self._square(args[2])
             convoyed_piece = self.board.get_piece(convoy_starting_square)
             if convoyed_piece is None:
                 self.console.out(f"No piece on {convoy_starting_square} to support convoy.")
                 return False
-            convoyed_order_code = Order.SUPPORT if args[3] == 's' else Order.MOVE
+            convoyed_order_class = SupportOrder if args[3] == 's' else MoveOrder
             convoy_landing_square = self._square(args[4])
             _, intermediate_squares = ChessPath.validate_path(convoyed_piece, convoy_starting_square, convoy_landing_square)
             if convoy_square not in intermediate_squares:
                 self.console.out("Convoying square cannot convoy along specified path.")
                 return False
-            self.order_manager.get_support_convoy_order(piece, convoy_square, convoyed_order_code, (convoyed_piece, convoy_landing_square))
+            self.order_manager.get_support_convoy_order(piece, convoy_square, convoyed_order_class, (convoyed_piece, convoy_landing_square))
             return True
-        elif order_code == Order.BUILD:
+        elif order_class is BuildOrder:
             piece_chr = args[1].upper() if args[1] else "P"
             piece_code = self.piece_dict[piece_chr]
             order = BuildOrder(power, piece_code, starting_square)
             self.order_manager._clear_conflicting_orders(order)
             self.order_manager.add(order)
             return True
-        elif order_code == Order.DISBAND:
+        elif order_class is DisbandOrder:
             order = DisbandOrder(piece)
             self.order_manager._clear_conflicting_orders(order)
             self.order_manager.add(order)

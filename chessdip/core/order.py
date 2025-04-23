@@ -3,16 +3,6 @@
 from chessdip.board.chess_path import ChessPath
 
 class Order:
-    HOLD = 0
-    MOVE = 1
-    CONVOY = 2
-    SUPPORT = 6
-    SUPPORT_HOLD = 3
-    SUPPORT_MOVE = 4
-    SUPPORT_CONVOY = 5
-    BUILD = -1
-    DISBAND = -2
-    
     def __init__(self, piece, *other_args, virtual=False):
         self.piece = piece
         self.other_args = other_args
