@@ -70,6 +70,8 @@ class OrderInterface:
     def set_success(self, order, success):
         order.set_success(success)
         self.artists[order].set_success(success)
+        for convoy_order in order.get_convoys():
+            self.set_success(convoy_order, success)
         self.visualizer.set_stale()
     
     def get_other_opposing(self, order):

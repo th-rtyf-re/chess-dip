@@ -224,21 +224,38 @@ class GameManager:
         self._add_holds()
         adjudicator = Adjudicator(self.order_manager)
         adjudicator.adjudicate()
+        self._make_disbands()
     
     def _add_holds(self):
         """
-        Add holds for unordered pieces, and make holds with at least one
-        real support real.
+        Add or make real the hold orders for non-moving pieces.
         """
-        has_order = {piece: False for piece in self.board.get_pieces()}
+        has_order = {piece: 0 for piece in self.board.get_pieces()}# 0 for no order, 1 for move order, 2 for other order
         for order in self.order_manager.get_orders():
-            if not order.get_virtual():
+            if isinstance(order, MoveOrder) and not order.get_virtual():
                 piece = order.get_piece()
                 if piece is not None:
-                    has_order[piece] = True
+                    has_order[piece] = 1
+            elif not order.get_virtual():
+                piece = order.get_piece()
+                if piece is not None:
+                    has_order[piece] = 2
+        for order in self.order_manager.get_orders():
+            if isinstance(order, HoldOrder) and has_order[order.get_piece()] != 1:
+                self.order_manager.set_virtual(order, False)
         for piece, b in has_order.items():
-            if not b:
+            if b == 0:
                 self.order_manager.get_order(Order.HOLD, (piece,))
+    
+    def _make_disbands(self):
+        disband_orders = []
+        for order in self.order_manager.get_orders():
+            if isinstance(order, MoveOrder) and order.get_success():
+                piece = self.board.get_piece(order.get_landing_square())
+                if piece is not None:
+                    disband_orders.append(DisbandOrder(piece))
+        for order in disband_orders:
+            self.order_manager.add(order)
     
     def progress(self):
         for order, artist in self.order_manager.get_items():
