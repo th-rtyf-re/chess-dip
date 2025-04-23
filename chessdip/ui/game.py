@@ -243,16 +243,6 @@ class GameManager:
                 order.execute(self.board, self.console)
         self.order_manager.clear()
     
-    def _square(self, square_str):
-        """
-        Assume that `square_str` is a valid input.
-        """
-        if len(square_str) < 2:
-            return None
-        file = ord(square_str[0]) - ord('a')
-        rank = int(square_str[1]) - 1
-        return Square(file=file, rank=rank)
-    
     def process_orders(self, power, messages):
         for message in messages:
             self._process_order(power, message.lower().replace(' ', ''))
@@ -269,7 +259,7 @@ class GameManager:
             self.console.out("Could not parse order.")
             return False
         
-        starting_square = self._square(args[0])
+        starting_square = args[0]
         piece = self.board.get_piece(starting_square)
         if order_class is BuildOrder:
             pass
@@ -284,11 +274,11 @@ class GameManager:
             self.order_manager.get_order(order_class, (piece,))
             return True
         elif order_class is MoveOrder:
-            landing_square = self._square(args[1])
+            landing_square = args[1]
             self.order_manager.get_order(order_class, (piece, landing_square))
             return True
         elif order_class is SupportHoldOrder:
-            supported_square = self._square(args[1])
+            supported_square = args[1]
             supported_piece = self.board.get_piece(supported_square)
             if supported_piece is None:
                 self.console.out(f"No piece on {supported_square} to support.")
@@ -296,23 +286,23 @@ class GameManager:
             self.order_manager.get_support_order(order_class, piece, HoldOrder, (supported_piece,))
             return True
         elif order_class is SupportMoveOrder:
-            supported_square = self._square(args[1])
+            supported_square = args[1]
             supported_piece = self.board.get_piece(supported_square)
-            supported_landing_square = self._square(args[3])
+            supported_landing_square = args[3]
             if supported_piece is None:
                 self.console.out(f"No piece on {supported_square} to support.")
                 return False
             self.order_manager.get_support_order(order_class, piece, MoveOrder, (supported_piece, supported_landing_square))
             return True
         elif order_class is SupportConvoyOrder:
-            convoy_square = self._square(args[1])
-            convoy_starting_square = self._square(args[2])
+            convoy_square = args[1]
+            convoy_starting_square = args[2]
             convoyed_piece = self.board.get_piece(convoy_starting_square)
             if convoyed_piece is None:
                 self.console.out(f"No piece on {convoy_starting_square} to support convoy.")
                 return False
             convoyed_order_class = SupportOrder if args[3] == 's' else MoveOrder
-            convoy_landing_square = self._square(args[4])
+            convoy_landing_square = args[4]
             _, intermediate_squares = ChessPath.validate_path(convoyed_piece, convoy_starting_square, convoy_landing_square)
             if convoy_square not in intermediate_squares:
                 self.console.out("Convoying square cannot convoy along specified path.")

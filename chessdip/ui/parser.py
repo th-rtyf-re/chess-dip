@@ -29,36 +29,62 @@ class Parser:
             f"|build(?P<build_piece>{piece})(?P<build_square>{square})"
             f"|disband{piece}(?P<disband_square>{square})"
         )
-        # print(self.pattern)
     
     def parse(self, message):
         m = re.fullmatch(self.pattern, message)
         if m is None:
             return None, tuple()
         elif m["hold"] is not None:
-            args = (m["starting_square"],)
+            args = (_square(m["starting_square"]),)
             return HoldOrder, args
         elif m["move"] is not None:
-            args = (m["starting_square"], m["landing_square"])
+            args = (
+                _square(m["starting_square"]),
+                _square(m["landing_square"])
+            )
             return MoveOrder, args
         elif m["support"] is not None:
             if m["supported_hold"] is not None:
-                args = (m["starting_square"], m["supported_starting_square"])
+                args = (
+                    _square(m["starting_square"]),
+                    _square(m["supported_starting_square"])
+                )
                 return SupportHoldOrder, args
             elif m["supported_landing_square"] is not None:
-                args = (m["starting_square"], m["supported_starting_square"], m["supported_move_code"], m["supported_landing_square"])
+                args = (
+                    _square(m["starting_square"]),
+                    _square(m["supported_starting_square"]),
+                    m["supported_move_code"],
+                    _square(m["supported_landing_square"])
+                )
                 return SupportMoveOrder, args
             elif m["convoy_starting_square"] is not None:
-                args = (m["starting_square"], m["supported_starting_square"], m["convoy_starting_square"], m["convoy_code"], m["convoy_landing_square"])
+                args = (
+                    _square(m["starting_square"]),
+                    _square(m["supported_starting_square"]),
+                    _square(m["convoy_starting_square"]), 
+                    m["convoy_code"],
+                    _square(m["convoy_landing_square"])
+                )
                 return SupportConvoyOrder, args
         elif m["build_piece"] is not None:
-            args = (m["build_square"], m["build_piece"])
+            args = (_square(m["build_square"]), m["build_piece"])
             return BuildOrder, args
         elif m["disband_square"] is not None:
-            args = (m["disband_square"],)
+            args = (_square(m["disband_square"]),)
             return DisbandOrder, args
         else:
             return None, tuple()
+    
+def _square(square_str):
+    """
+    Assume that `square_str` is a valid input.
+    """
+    if len(square_str) < 2:
+        return None
+    file = ord(square_str[0]) - ord('a')
+    rank = int(square_str[1]) - 1
+    return Square(file=file, rank=rank)
 
 def test():
     from order import Order
