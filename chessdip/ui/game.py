@@ -159,14 +159,6 @@ class GameManager:
         self.console = Console()
         self.board = BoardInterface(self.powers, self.visualizer)
         self.parser = Parser(Order)
-        
-        self.piece_dict = {
-            'P': Piece.PAWN,
-            'N': Piece.KNIGHT,
-            'B': Piece.BISHOP,
-            'R': Piece.ROOK,
-            'K': Piece.KING
-        }
     
     def add_power(self, *args, **kwargs):
         power = Power(self._next_power_code, *args, **kwargs)
@@ -180,7 +172,7 @@ class GameManager:
     def setup_pieces(self, power, notations):
         for notation in notations:
             instruc = notation.replace(" ", "")
-            piece_code = self.piece_dict[instruc[0]]
+            piece_code = self.parser.piece_dict[instruc[0]]
             square = self.parser.square(instruc[1:3])
             self.board.add_piece(piece_code, power, square)
     
@@ -311,7 +303,7 @@ class GameManager:
             return True
         elif order_class is BuildOrder:
             piece_chr = args[1].upper() if args[1] else "P"
-            piece_code = self.piece_dict[piece_chr]
+            piece_code = self.parser.piece_dict[piece_chr]
             order = BuildOrder(power, piece_code, starting_square)
             self.order_manager._clear_conflicting_orders(order)
             self.order_manager.add(order)

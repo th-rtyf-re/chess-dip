@@ -9,6 +9,14 @@ class Parser:
     def __init__(self, order_class):
         self.order_class = order_class
         
+        self.piece_dict = {
+            'P': Piece.PAWN,
+            'N': Piece.KNIGHT,
+            'B': Piece.BISHOP,
+            'R': Piece.ROOK,
+            'K': Piece.KING
+        }
+        
         piece = "[pnbrk]?"
         square = "[abcdefgh][12345678]"
         supported_action = (
