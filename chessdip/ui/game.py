@@ -217,22 +217,15 @@ class GameManager:
         """
         Add or make real the hold orders for non-moving pieces.
         """
-        has_order = {piece: 0 for piece in self.board.get_pieces()}# 0 for no order, 1 for move order, 2 for other order
+        has_order = {piece: 0 for piece in self.board.get_pieces()}# 1 for move order, 2 for hold order, 0 for other
         for order in self.order_manager.get_orders():
             if isinstance(order, MoveOrder) and not order.get_virtual():
-                piece = order.get_piece()
-                if piece is not None:
-                    has_order[piece] = 1
-            elif not order.get_virtual():
-                piece = order.get_piece()
-                if piece is not None:
-                    has_order[piece] = 2
-        for order in self.order_manager.get_orders():
-            if isinstance(order, HoldOrder) and has_order[order.get_piece()] != 1:
+                has_order[order.get_piece()] = 1
+            elif isinstance(order, HoldOrder):
                 self.order_manager.set_virtual(order, False)
-        for piece, b in has_order.items():
-            if b == 0:
-                self.order_manager.get_order(HoldOrder, (piece,))
+        for piece, v in has_order.items():
+            if v == 0:
+                self.order_manager.add(HoldOrder(piece))
     
     def _make_disbands(self):
         disband_orders = []
