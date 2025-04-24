@@ -70,6 +70,9 @@ class OrderInterface:
     def set_success(self, order, success):
         order.set_success(success)
         self.artists[order].set_success(success)
+        supported_order = order.get_supported_order()
+        if supported_order is not None:
+            self.artists[supported_order].set_support_success(self.artists[order], success)
         for convoy_order in order.get_convoys():
             self.set_success(convoy_order, success)
         self.visualizer.set_stale()
