@@ -18,7 +18,10 @@ class ChessPathArtist:
             path = Path(vertices, codes)
         else:
             x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
-            x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
+            if junction is None:
+                x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
+            else:
+                x1, y1 = junction
             last_vertex = self._shrink_line((x0, y0), (x1, y1), shrink)
             path = Path([(x0, y0), last_vertex], [Path.MOVETO, Path.LINETO])
         return path
