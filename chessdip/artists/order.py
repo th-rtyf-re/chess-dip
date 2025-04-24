@@ -82,8 +82,8 @@ class OrderArtist:
             patch.set_linestyle(ls)
     
     def set_success(self, success):
-        for patch in self.patches:
-            patch.set_ec("k" if success else "r")
+        if self.patches:
+            self.patches[0].set_ec("k" if success else "r")
     
     def set_support_success(self, support_artist, success):
         try:
