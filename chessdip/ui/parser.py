@@ -23,11 +23,11 @@ class Parser:
         supported_action = (
             f"(?P<supported_hold>h)"
             f"|(?P<supported_move_code>[-xt]?)(?P<supported_landing_square>{square})"
-            f"|c(?P<convoy_starting_square>{square})(?P<convoy_code>[-xts]?)(?P<convoy_landing_square>{square})"
+            f"|c(?:{piece})(?P<convoy_starting_square>{square})(?P<convoy_code>[-xts]?)(?P<convoy_landing_square>{square})"
         )
         action = (
             f"(?P<move>-?(?P<landing_square>{square}))"
-            f"|(?P<support>s(?P<supported_starting_square>{square})(?:{supported_action}))"
+            f"|(?P<support>s(?:{piece})(?P<supported_starting_square>{square})(?:{supported_action}))"
             f"|(?P<en_passant>(?=(?:|.{{3}})t(?P<ep_travel_square>{square}))(?=(?:|.{{3}})x(?P<ep_attack_square>{square})).{{6}})"
             f"|(?P<hold>h)"
         )
