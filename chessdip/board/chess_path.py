@@ -13,6 +13,8 @@ class ChessPath:
         self.valid, self.intermediate_squares = ChessPath.validate_path(self.piece, self.start, self.land)
     
     def validate_path(piece, start, land):
+        if start == land:
+            return False, []
         valid = False
         intermediate_squares = []
         dfile = land.file - start.file
