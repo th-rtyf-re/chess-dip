@@ -132,9 +132,6 @@ class MoveOrder(Order):
         elif not self.chess_path.valid:
             console.out(f"{self.piece} cannot move to {self.landing_square}.")
             return False
-        # other_piece = board.get_piece(self.landing_square)
-        # if other_piece is not None:
-        #     board.remove_piece(other_piece)
         board.move_piece_to(self.piece, self.landing_square)
         board.set_ownership(self.landing_square, self.piece.power)
         console.out(f"{self.piece} moved to {self.landing_square}.")
