@@ -1,5 +1,6 @@
 # -*-coding:utf8-*-
 
+from chessdip.board.square import Square
 from chessdip.board.piece import Piece
 from chessdip.board.board import Board
 
@@ -16,6 +17,18 @@ class BoardInterface:
         self.visualizer.add_artist(self.board_artist)
         
         self.piece_artists = {}
+    
+    def clear(self):
+        for _, artist in self.piece_artists.items():
+            artist.remove()
+        self.piece_artists.clear()
+        neutral_power = self.board.get_neutral_power()
+        for rank in range(8):
+            for file in range(8):
+                square = Square(rank=rank, file=file)
+                self.set_ownership(square, neutral_power)
+                self.set_sc_ownership(square, neutral_power)# TODO: fix for white and black SCs
+        self.visualizer.set_stale()
     
     def get_pieces(self):
         return self.piece_artists.keys()

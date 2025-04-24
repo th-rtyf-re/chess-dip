@@ -29,7 +29,7 @@ class Board:
         self.sc_ownership = np.zeros((8, 8), dtype=int)# -1 for white, -2 for black
         self.sc_ownership[:2][self.sc_mask[:2]] = Side.WHITE
         self.sc_ownership[-2:][self.sc_mask[-2:]] = Side.BLACK
-        
+    
     def set_ownership(self, square, power):
         old_code = self.ownership[square.rank, square.file]
         new_code = power.get_code()
@@ -39,12 +39,17 @@ class Board:
         return False
     
     def set_sc_ownership(self, square, power):
+        if not self.sc_mask[square.rank, square.file]:
+            return False
         old_code = self.sc_ownership[square.rank, square.file]
         new_code = power.get_code()
         if old_code != new_code:
             self.sc_ownership[square.rank, square.file] = power.get_code()
             return True
         return False
+    
+    def get_neutral_power(self):
+        return self.powers[0]
     
     def add_piece(self, code, power, square):
         piece = Piece(code, power, square, self.visualizer)

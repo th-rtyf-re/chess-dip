@@ -160,6 +160,10 @@ class GameManager:
         self.board = BoardInterface(self.powers, self.visualizer)
         self.parser = Parser(Order)
     
+    def clear_board(self):
+        self.board.clear()
+        self.order_manager.clear()
+    
     def add_power(self, *args, **kwargs):
         power = Power(self._next_power_code, *args, **kwargs)
         self.powers.append(power)
@@ -345,6 +349,8 @@ class GameManager:
                 self.adjudicate()
             elif message == "progress":
                 self.progress()
+            elif message[:len("clear")] == "clear":
+                self.clear_board()
             elif message[:len("power")] == "power":
                 power_str = message[len("power"):]
                 try:
