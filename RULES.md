@@ -36,10 +36,10 @@ Kings and knights move as they do in chess on an empty board; see the variant [C
 ### Orders
 
 Here are some examples of orders:  
-> move: `K e1 - e2`  
-> hold: `K d1 H`  
-> support-move: `N g1 S e1 - e2`  
-> support-hold: `N c3 S d1 H`
+> move: `Ke1 - e2`  
+> hold: `Kd1 H`  
+> support-move: `Ng1 S e1 - e2`  
+> support-hold: `Nc3 S d1 H`
 
 ### Dislodges
 
@@ -59,7 +59,7 @@ A multiple-square order automatically issues a **convoy** order on each of its i
 `e2 C f1 - c4` or  
 `e2 C f1 S c4`,  
 where in the second example `c4` is the *landing square* of the support order from `f1`. Note that convoys are ordered to squares, not pieces. Also note that a square may receive multiple convoy orders. Powers may not explicitly order such moves, but they may support them with a new type of support, the **support-convoy**. Such an order looks like  
-`K e1 S e2 C f1 - c4`.  
+`Ke1 S e2 C f1 - c4`.  
 The prevent strength of a convoy order is the number of successful support-convoys that it receives. A convoy order fails if a move order onto its square succeeds, taking into account the convoy order's prevent strength. A convoy order also fails if its prevent strength is less than that of another convoy order on the same square. 
 
 When adjudicating, multiple-square orders are treated like standard orders at their landing squares. Thus they can bounce, dislodge, etc.
@@ -98,7 +98,7 @@ For example, consider the following orders from the previous phase:
 In this case, the opponent pawn may receive an en passant order, which consists of an attack order on the passed pawn’s square and a travel order to the intermediate square. This is ordered as  
 `e5 t d6 x d5`.  
 The attack and travel orders may be supported separately. For example, with the previous order.  
-`K c3 S e5 x d5`  
+`Kc3 S e5 x d5`  
 `e7 S e5 t d6`  
 both support the en passant move. An en passant move succeeds when both the travel order and the attack order succeed. Note that a successful en passant order dislodges the passed pawn without actually occupying its square.
 
@@ -140,18 +140,18 @@ Each power begins with a king. The square that this king begins on is called the
     - Otherwise, the order is of the form `<piece> <square0> . <square1> .*`.
         - If `<piece>` can move from `<square0>` to `<square1>` on an empty chess board, then the order is validated.
         - If the order is of the form `P <square0> t <square1> x <square2>`, the pawn could attack a piece on `<square1>`, another pawn passed `<square1>` to land on `<square2>` with a two-square move on the previous order phase, then the order is replaced by  
-`P <square0> t <square1>`  
-`P <square0> x <square2>`,  
+`P<square0> t <square1>`  
+`P<square0> x <square2>`,  
 and these orders are validated.
     - Otherwise, if the order is of the form `P <square0> . <square1> .*` and the pawn could attack a piece on `<square1>`, then the order is validated.
 - Now consider the case where the order is `<castle order>`.
     - If the order is `O-O`, there is a king on the power’s king square that has not moved yet, and there is a rook on the power’s king rook square that has not moved yet, then the order is replaced by  
-`K <king square> t <king knight square>`  
-`R <king rook square> t <king bishop square>`,  
+`K<king square> t <king knight square>`  
+`R<king rook square> t <king bishop square>`,  
 and these orders are validated.
     - If the order is `O-O-O`, there is a king on the power’s king square that has not moved yet, and there is a rook on the power’s queen rook square that has not moved yet, then the order is replaced by  
-`K <king square> t <queen bishop square>`  
-`R <king queen square> t <queen square>`,  
+`K<king square> t <queen bishop square>`  
+`R<king queen square> t <queen square>`,  
 and these orders are validated.
 - In all other cases, the order is invalidated.
 
