@@ -151,6 +151,9 @@ class ConvoyOrder(Order):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.square} convoy {self.convoyed_order}"
     
+    def get_starting_square(self):
+        return self.square
+    
     def get_landing_square(self):
         return self.square
     
