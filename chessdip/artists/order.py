@@ -202,5 +202,5 @@ class DisbandOrderArtist(OrderArtist):
         x0, x1 = square.file - w, square.file + w
         y0, y1 = square.rank - w, square.rank + w
         path = Path([(x0, y0), (x1, y1), (x0, y1), (x1, y0)], [Path.MOVETO, Path.LINETO, Path.MOVETO, Path.LINETO])
-        patch = mpl.patches.PathPatch(path, fc="none", ec="r", linewidth=4, capstyle="butt")
+        patch = mpl.patches.PathPatch(path, fc="none", ec="r", linewidth=global_kwargs["path_width"], capstyle="butt")
         self.patches.append(patch)
