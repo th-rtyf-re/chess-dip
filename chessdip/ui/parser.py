@@ -21,7 +21,7 @@ class Parser:
         piece = "[pnbrk]?"
         square = "[abcdefgh][12345678]"
         supported_action = (
-            f"(?P<supported_hold>h)"
+            f"(?P<supported_hold>h?)"
             f"|(?P<supported_move_code>[-xt]?)(?P<supported_landing_square>{square})"
             f"|c(?:{piece})(?P<convoy_starting_square>{square})(?P<convoy_code>[-xts]?)(?P<convoy_landing_square>{square})"
         )

@@ -1,1 +1,1 @@
-from chessdip.ui.game import GameManager
+from chessdip.ui.game import Console, GameManager

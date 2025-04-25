@@ -359,7 +359,7 @@ class GameManager:
                 except ValueError:
                     self.console.out(f"Power {power_str} not found.")
             elif message[:len("remove")] == "remove":
-                square = self._square(message[len("remove"):])
+                square = self.parser.square(message[len("remove"):])
                 if square is None:
                     continue
                 order = self._find_order_on_square(square, virtual=False)
