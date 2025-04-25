@@ -203,6 +203,7 @@ The attack strength of a travel order is ½. This is to allow traveling to an em
 
 ### Defend strength
 
+The the path of a move order fails, then the defend strength of the move order is 0\.  
 The defend strength of an attack order is 1 plus the number of successful support-move orders.  
 The defend strength of a travel order is 0\.
 
