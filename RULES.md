@@ -60,7 +60,7 @@ A multiple-square order automatically issues a **convoy** order on each of its i
 `e2 C f1 S c4`,  
 where in the second example `c4` is the *landing square* of the support order from `f1`. Note that convoys are ordered to squares, not pieces. Also note that a square may receive multiple convoy orders. Powers may not explicitly order such moves, but they may support them with a new type of support, the **support-convoy**. Such an order looks like  
 `K e1 S e2 C f1 - c4`.  
-The convoy strength of a convoy order is the number of successful support-convoys that it receives. A convoy order fails if its convoy strength is less than that of another convoy order on the same square. A convoy order also fails if a move order onto its square succeeds, this success being determined by interpreting the convoy strength as a prevent strength.
+The prevent strength of a convoy order is the number of successful support-convoys that it receives. A convoy order fails if a move order onto its square succeeds, taking into account the convoy order's prevent strength. A convoy order also fails if its prevent strength is less than that of another convoy order on the same square. 
 
 When adjudicating, multiple-square orders are treated like standard orders at their landing squares. Thus they can bounce, dislodge, etc.
 
@@ -178,7 +178,7 @@ The path of a move or support order is successful if there are no intermediate s
 
 - Squares have a **hold** strength.
 - Attack and travel orders have an **attack** strength, a **defend** strength, and a **prevent** strength.
-- Convoy orders have a **convoy** strength and a **prevent** strength.
+- Convoy orders have a **prevent** strength.
 
 A **head-to-head battle** is a pair of move orders from different powers where the starting square of one order is the landing square of the other, and vice-versa. Note that head-to-head battles cannot involve intermediate squares: due to the way pieces move, any such intermediate square would receive multiple convoy orders, making at least one of the two moves fail immediately.
 
@@ -212,12 +212,7 @@ If the path of a move order fails, then the prevent strength of the move order i
 If the move order is part of a head-to-head battle and the move order of the opposing piece is successful, then the prevent strength is 0\.  
 Otherwise, the prevent strength is 1 plus the number of successful support-move orders.
 
-If a convoy order fails, then its prevent strength is 0\.
-Otherwise, its prevent strength is the number of successful support-convoy orders.
-
-### Convoy strength
-
-The convoy strength of a convoy order is the number of successful support-convoy orders.
+The prevent strength of a convoy order is the number of successful support-convoy orders.
 
 ## Order success
 ### Convoy orders
@@ -226,7 +221,7 @@ A convoy order succeeds if the following conditions are satisfied:
 
 - The multiple-square order that it is convoying succeeds.
 - No piece stays on its square or successfully attacks its square.
-- Its convoy strength is greater than the convoy strength of any other convoy order on the same square.
+- Its prevent strength is greater than the prevent strength of any other convoy order on the same square.
 
 Otherwise, it fails.
 
