@@ -215,9 +215,10 @@ class GameManager:
         """
         has_move_order = {piece: False for piece in self.board.get_pieces()}
         for order in self.order_manager.get_orders():
-            if isinstance(order, MoveOrder) and not order.get_virtual():
+            if isinstance(order, MoveOrder) and not order.get_virtual() and order.chess_path.valid:
                 has_move_order[order.get_piece()] = True
-            elif isinstance(order, HoldOrder):
+        for order in self.order_manager.get_orders():
+            if isinstance(order, HoldOrder) and not has_move_order[order.get_piece()]:
                 self.order_manager.set_virtual(order, False)
         for piece, b in has_move_order.items():
             if not b:
@@ -227,6 +228,8 @@ class GameManager:
         failed_move = {piece: False for piece in self.board.get_pieces()}
         for order in self.order_manager.get_orders():
             if isinstance(order, MoveOrder) and not order.get_success():
+                failed_move[order.get_piece()] = True
+            elif isinstance(order, HoldOrder):
                 failed_move[order.get_piece()] = True
         disband_orders = []
         for order in self.order_manager.get_orders():
