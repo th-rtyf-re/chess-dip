@@ -12,11 +12,7 @@ class State(Enum):
 class Adjudicator:
     """
     Shoutouts to Lucas Kruijswijk (https://diplom.org/Zine/S2009M/Kruijswijk/DipMath_Chp6.htm)
-    and Talia Parkinson (pydip) and DATC (https://webdiplomacy.net/doc/DATC_v3_0.html#5.F).
-    
-    Here, we are basically keeping track of two results: certain successes and
-    guessed results. For strengths this means a minimal strength and a guessed
-    strength.
+    and Talia Parkinson (pydip) and DATC (https://webdiplomacy.net/doc/DATC_v3_0.html#5.E).
     """
     def __init__(self, order_interface):
         """
@@ -24,285 +20,321 @@ class Adjudicator:
         """
         self.order_interface = order_interface
         self.orders = [order for order in self.order_interface.get_orders() if not order.get_virtual() and not isinstance(order, HoldOrder | ConvoyOrder)]
-        self.results = {order: False for order in self.orders}
-        self.states = {order: State.UNRESOLVED for order in self.orders}
-        self.dependencies = []
+        self.result = {order: False for order in self.orders}
+        self.resolved = {order: False for order in self.orders}
+        self.visited = {order: False for order in self.orders}
+        self.cycle = []
+        self.recursion_hits = 0
+        self.uncertain = True
+        
+        self._debug_call_depth = 0
+    
+    def _debug_out(self, message):
+        print("│ " * self._debug_call_depth + message)
+    
+    def _debug_out_decr(self, message):
+        self._debug_call_depth -= 1
+        print("│ " * self._debug_call_depth + "└ " + message)
+    
+    def _debug_optimistic(self, optimistic):
+        return "optimistic" if optimistic else "pessimistic"
+    
+    def _debug_result(self, result):
+        return "succeed" if result else "fail"
+    
+    def _debug_resolved(self, order):
+        return "resolved" if self.resolved[order] else "unresolved"
     
     def adjudicate(self):
         for order in self.orders:
-            result, _ = self._resolve(order)
+            result = self._resolve(order, True)
             self.order_interface.set_success(order, result)
         # Set virtual moves to fail
         for order in self.order_interface.get_orders():
             if order.get_virtual():
                 self.order_interface.set_success(order, False)
     
-    def _resolve(self, order):
-        if self.states[order] == State.RESOLVED:
-            return self.results[order], True
-        elif self.states[order] == State.GUESSING:
-            if order not in self.dependencies:
-                self.dependencies.append(order)
-            return self.results[order], False
+    def _resolve(self, order, optimistic):
+        self._debug_out(f"Resolve {order} {self._debug_optimistic(optimistic)}")
+        self._debug_call_depth += 1
+        # print("recursion hits", self.recursion_hits)
+        if self.resolved[order]:
+            self._debug_out_decr(f"1. end resolve: {self._debug_result(self.result[order])}, {self._debug_resolved(order)}")
+            return self.result[order]
+        elif order in self.cycle:
+            self.uncertain = True
+            self._debug_out_decr(f"2. end resolve: in cycle, uncertain, {self._debug_result(optimistic)}, {self._debug_resolved(order)}")
+            return optimistic
+        elif self.visited[order]:
+            self.cycle.append(order)
+            self.recursion_hits += 1
+            self.uncertain = True
+            self._debug_out_decr(f"3. end resolve: visited, uncertain, {self._debug_result(optimistic)}, {self._debug_resolved(order)}")
+            return optimistic
         
-        # Otherwise, make a guess
-        self.results[order] = False
-        self.states[order] = State.GUESSING
-        old_dep_length = len(self.dependencies)
-        fail_guess_result, certain = self._adjudicate_with_guesses(order)
+        self.visited[order] = True
+        old_cycle_len = len(self.cycle)
+        old_recursion_hits = self.recursion_hits
+        old_uncertain = self.uncertain
         
-        if certain:
-            self.results[order] = fail_guess_result
-            self.states[order] = State.RESOLVED
-            return self.results[order], True
-        elif order not in self.dependencies[old_dep_length:]:
-            self.dependencies.append(order)
-            self.results[order] = fail_guess_result
-            return self.results[order], False
+        self.uncertain = False
+        opt_result = self._adjudicate(order, True)
+        if self.uncertain and opt_result:
+            pes_result = self._adjudicate(order, False)
+        else:
+            pes_result = opt_result
+        self.visited[order] = False
         
-        # Other guess
-        for other_order in self.dependencies[old_dep_length:]:
-            self.results[other_order] = State.UNRESOLVED
-        self.dependencies = self.dependencies[:old_dep_length]
-        self.results[order] = True
-        self.states[order] = State.GUESSING
-        success_guess_result, _ = self._adjudicate_with_guesses(order)
+        if opt_result == pes_result:
+            self.cycle = self.cycle[:old_cycle_len]
+            self.recursion_hits = old_recursion_hits
+            self.uncertain = old_uncertain
+            self.result[order] = opt_result
+            self.resolved[order] = True
+            self._debug_out_decr(f"4. end resolve: {self._debug_result(opt_result)}, {self._debug_resolved(order)}")
+            return opt_result
         
-        if fail_guess_result == success_guess_result:
-            for other_order in self.dependencies[old_dep_length:]:
-                self.results[other_order] = State.UNRESOLVED
-            self.dependencies = self.dependencies[:old_dep_length]
-            self.results[order] = fail_guess_result
-            self.states[order] = State.RESOLVED
-            return self.results[order], True
+        elif order in self.cycle:
+            self.recursion_hits -= 1
         
-        # Backup rule
-        self._backup_rule(self.dependencies[old_dep_length:])
-        self.dependencies = self.dependencies[:old_dep_length]
-        return self._resolve(order)
+            if self.recursion_hits == old_recursion_hits:
+                self._backup_rule(self.cycle[old_cycle_len:])
+                self.cycle = self.cycle[:old_cycle_len]
+                self.uncertain = old_uncertain
+                ret = self._resolve(order, optimistic)
+                self._debug_out_decr(f"5. end resolve: ancestor of cycle, {self._debug_result(ret)}, {self._debug_resolved(order)}")
+                return ret
+        
+        elif not order in self.cycle:
+            self.cycle.append(order)
+        self._debug_out_decr(f"6. end resolve: not ancestor of cycle, {self._debug_result(optimistic)}, {self._debug_resolved(order)}")
+        return optimistic
     
     # Main adjudication functions
     
-    def _adjudicate_with_guesses(self, order):
+    def _adjudicate(self, order, optimistic):
+        self._debug_out(f"Adjudicate {order} {self._debug_optimistic(optimistic)}")
+        self._debug_call_depth += 1
         if isinstance(order, MoveOrder):
-            return self._adjudicate_move(order)
+            ret = self._adjudicate_move(order, optimistic)
+            self._debug_out_decr(f"end adjudicate: {self._debug_result(ret)}")
+            return ret
         elif isinstance(order, SupportOrder):
-            return self._adjudicate_support(order)
+            ret = self._adjudicate_support(order, optimistic)
+            self._debug_out_decr(f"end adjudicate: {self._debug_result(ret)}")
+            return ret
         else:
             raise ValueError(f"Adjudicating unexpected order: {order}")
     
     def _backup_rule(self, orders):
+        self._debug_out(f"backup rule")
+        if not orders:
+            raise NameError("No orders in backup!")
         for order in orders:
-            if isinstance(order, ConvoyOrder):
-                self._apply_szykman(orders)
-                return
+            self._debug_out(f"with: {order}")
+        for order in orders:
+            if isinstance(order, SupportConvoyOrder):
+                # A supported convoy is the problem
+                convoy_order = self._get_convoy(order.get_supported_order().get_landing_square())
+                if convoy_order is not None:
+                    self._debug_out(f"applying reverse Szykman's rule")
+                    convoyed_order = convoy_order.get_convoyed_order()
+                    self.result[convoyed_order] = True
+                    self.resolved[convoyed_order] = True
+                    try:
+                        orders.remove(convoyed_order)
+                    except:
+                        pass
+                    self._apply_szykman(orders)
+                    return
+        for order in orders:
+            if isinstance(order, SupportMoveOrder):
+                # A supported attack on a convoy is the problem
+                convoy_order = self._get_convoy(order.get_supported_order().get_landing_square())
+                if convoy_order is not None:
+                    self._debug_out(f"applying Szykman's rule")
+                    convoyed_order = convoy_order.get_convoyed_order()
+                    self.result[convoyed_order] = False
+                    self.resolved[convoyed_order] = True
+                    try:
+                        orders.remove(convoyed_order)
+                    except:
+                        pass
+                    self._apply_szykman(orders)
+                    return
         self._apply_circular_movement(orders)
     
     def _apply_szykman(self, orders):
         for order in orders:
-            if isinstance(order, ConvoyOrder):
-                self.results[order] = False
-                self.states[order] = State.RESOLVED
-            else:
-                self.states[order] = State.UNRESOLVED
+            # if isinstance(order, ConvoyOrder):
+            #     self.result[order] = False
+            #     self.resolved[order] = True
+            # else:
+            self.resolved[order] = False
     
     def _apply_circular_movement(self, orders):
+        self._debug_out(f"applying circular movement")
         for order in orders:
-            if isinstance(self.orders[order], MoveOrder):
-                self.results[order] = True
-                self.states[order] = State.RESOLVED
+            if isinstance(order, MoveOrder):
+                for other_order in orders:
+                    if isinstance(other_order, MoveOrder) and order.get_landing_square() == other_order.get_starting_square():
+                        self._debug_out(f"circulating {order}")
+                        self.result[order] = True
+                        self.resolved[order] = True
+                        break
             else:
-                self.states[order] = State.UNRESOLVED
+                self.resolved[order] = False
     
     # Core adjudication functions
     
-    def _adjudicate_move(self, order):
+    def _adjudicate_move(self, order, optimistic):
         order_at_landing = self._get_order_at_landing(order)
-        attack_strength = self._get_attack_strength(order, order_at_landing)
+        attack_strength = self._get_attack_strength(order, order_at_landing, optimistic)
+        # self._debug_out(f"got attack strength {attack_strength} for {order}")
         
-        result_guess = _certain_true
-        if isinstance(order_at_landing, MoveOrder) and order_at_landing.get_landing_square() == order.get_starting_square():
-            # Head-to-head
-            defend_strength = self._get_defend_strength(order_at_landing)
-            result_guess = _guess_and(_guess_lt(defend_strength, attack_strength), result_guess)
-            if _certain_not(result_guess):
-                return _certain_false
+        if (isinstance(order_at_landing, MoveOrder)
+            and order_at_landing.get_landing_square() == order.get_starting_square()
+            and order_at_landing.chess_path.valid
+        ): # Head-to-head
+            defend_strength = self._get_defend_strength(order_at_landing, not optimistic)
+            if defend_strength >= attack_strength:
+                return False
         else: # No head-to-head
-            hold_strength = self._get_hold_strength(order.get_landing_square())
-            result_guess = _guess_and(_guess_lt(hold_strength, attack_strength), result_guess)
-            if _certain_not(result_guess):
-                return _certain_false
+            hold_strength = self._get_hold_strength(order.get_landing_square(), not optimistic)
+            # self._debug_out(f"got hold strength {hold_strength}")
+            if hold_strength >= attack_strength:
+                return False
         
         # Get prevent strengths
         opposing_orders = self._get_other_opposing(order)
         for other_order in opposing_orders:
-            prevent_strength = self._get_prevent_strength(other_order, order_at_landing)
-            result_guess = _guess_and(_guess_lt(prevent_strength, attack_strength), result_guess)
-            if _certain_not(result_guess):
-                return _certain_false
-        return result_guess
+            prevent_strength = self._get_prevent_strength(other_order, order_at_landing, not optimistic)
+            # self._debug_out(f"got prevent strength {prevent_strength} for {other_order}")
+            if prevent_strength >= attack_strength:
+                return False
+        return True
     
-    def _adjudicate_support(self, order):
-        result_guess = self._check_path(order)
-        if _certain_not(result_guess):
-            return _certain_false
+    def _adjudicate_support(self, order, optimistic):
+        if not self._check_path(order, optimistic):
+            return False
         
+        supported_order = order.get_supported_order()
+        if isinstance(supported_order, ConvoyOrder) and not self._resolve(supported_order.get_convoyed_order(), optimistic):
+            return False
         for other_order in self.orders:
             if (isinstance(other_order, MoveOrder)
                 and other_order.get_landing_square() == order.get_starting_square()
-            ): # checking for dislodges
-                dislodge_success = self._resolve(other_order)
-                result_guess = _guess_and(_guess_not(dislodge_success), result_guess)
-                if _certain_not(result_guess):
-                    return _certain_false
-                
+            ): # checking for dislodge
+                if self._resolve(other_order, not optimistic):
+                    return False
                 if (other_order.get_piece().get_power() != order.get_piece().get_power()
                     and order.get_landing_square() != other_order.get_starting_square()
-                ): # checking for cut support
-                    cut_success = self._check_path(other_order)
-                    result_guess = _guess_and(_guess_not(cut_success), result_guess)
-                    if _certain_not(result_guess):
-                        return _certain_false
-        return result_guess
+                    # and order.get_landing_square() not in other_order.get_intermediate_squares()
+                    and self._check_path(other_order, not optimistic)
+                ): # checking for cut
+                    return False
+        return True
     
-    def _check_path(self, order):
+    def _check_path(self, order, optimistic):
         if not order.chess_path.valid:
-            return _certain_false
-        result_guess = _certain_true
+            return False
+        
         for convoy_order in order.get_convoys():
-            order_at_landing = self._get_move_or_hold(convoy_order.get_landing_square())
-            if isinstance(order_at_landing, MoveOrder):
-                move_success = self._resolve(order_at_landing)
-                result_guess = _guess_and(move_success, result_guess)
-                if _certain_not(result_guess):
-                    return _certain_false
-            elif isinstance(order_at_landing, HoldOrder):
-                return _certain_false
+            order_at_landing = self._get_move(convoy_order.get_landing_square())
+            if order_at_landing is not None:
+                # check if piece moves away
+                if not self._resolve(order_at_landing, optimistic):
+                    return False
+            else:
+                order_at_landing = self._get_hold(convoy_order.get_landing_square())
+                if order_at_landing is not None:
+                    # a piece is holding; convoy cannot succeed
+                    return False
             
-            convoy_strength = self._get_convoy_strength(convoy_order)
+            convoy_strength = self._get_prevent_strength(convoy_order, None, optimistic)
             other_orders = self._get_other_opposing(convoy_order)
             for other_order in other_orders:
-                if isinstance(other_order, HoldOrder):
-                    return _certain_false
-                elif isinstance(other_order, ConvoyOrder):
-                    other_convoy_strength = self._get_convoy_strength(other_order)
-                    result_guess = _guess_and(_guess_lt(other_convoy_strength, convoy_strength), result_guess)
-                    if _certain_not(result_guess):
-                        return _certain_false
-                elif isinstance(other_order, MoveOrder):
-                    other_success = self._resolve(other_order)
-                    result_guess = _guess_and(_guess_not(other_success), result_guess)
-                    if _certain_not(result_guess):
-                        return _certain_false
-        return result_guess
-
+                if isinstance(other_order, ConvoyOrder): # competing convoy
+                    other_convoy_strength = self._get_prevent_strength(other_order, None, not optimistic)
+                    if other_convoy_strength >= convoy_strength:
+                        return False
+                elif isinstance(other_order, MoveOrder): # attacking piece
+                    if self._resolve(other_order, not optimistic):
+                        return False
+        return True
+    
     # Strength computations
     
-    def _get_hold_strength(self, square):
-        order = self._get_move_or_hold(square)
-        if order is None:
-            return 0, 0
-        elif isinstance(order, MoveOrder):
-            result, certain = self._resolve(order)
-            if result: # move success
-                return 0, 0
-            elif certain: # certain move failure
-                return 1, 1
-            else: # guessed move failure
-                return 0, 1
-        else: # count support-holds
-            min_support, max_support = self._get_support_strength(order)
-            return min_support + 1, max_support + 1
+    def _get_hold_strength(self, square, optimistic):
+        # self._debug_out(f"Getting hold strength at {square}")
+        order = self._get_move(square)
+        if order is not None and order.chess_path.valid:
+            if self._resolve(order, not optimistic): # we want the move to fail
+                return 0
+            else:
+                return 1
+        else: # count support-holds of hold order
+            order = self._get_hold(square)
+            if order is not None:
+                return 1 + self._get_support_strength(order, optimistic)
+        return 0
     
-    def _get_prevent_strength(self, order, order_at_landing):
+    def _get_prevent_strength(self, order, order_at_landing, optimistic):
+        # self._debug_out(f"Getting prevent strength of {order}")
         if isinstance(order, ConvoyOrder):
-            result, certain = self._resolve(order.get_convoyed_order())
-            if not result: # convoy failed
-                return 0, 0
-            elif certain: # certain convoy success
-                min_support, max_support = self._get_support_strength(order)
-                return min_support, max_support
-            else: # guessed convoy success
-                max_support = self._get_guessed_support_strength(order)
-                return 0, max_support
+            if self._resolve(order.get_convoyed_order(), optimistic):
+                return self._get_support_strength(order, optimistic)
+            else:
+                return 0
         
-        result, certain = self._check_path(order)
-        if not result:
-            return 0, 0
-        else:
-            if (order_at_landing is not None
-                and isinstance(order_at_landing, MoveOrder)
-                and order_at_landing.get_landing_square() == order.get_starting_square()
-            ): # head-to-head
-                success_at_landing = self._resolve(order_at_landing)
-                result, certain = _guess_and(success_at_landing, (result, certain))
-                if result: # head-to-head success
-                    return 0, 0
-                elif not certain: # guessed head-to-head failure
-                    max_support = self._get_guessed_support_strength(order)
-                    return 0, max_support + 1
-            else: # certain head-to-head failure or no head-to-head
-                min_support, max_support = self._get_support_strength(order)
-                return min_support + 1, max_support + 1
+        if not self._check_path(order, optimistic):
+            return 0
+        elif (order_at_landing is not None
+            and isinstance(order_at_landing, MoveOrder)
+            and order_at_landing.get_landing_square() == order.get_starting_square()
+            and self._resolve(order_at_landing, not optimistic)
+        ): # head-to-head succeeds
+            return 0
+        else: # head-to-head fails or no head-to-head
+            return 1 + self._get_support_strength(order, optimistic)
     
-    def _get_defend_strength(self, order):
-        min_support, max_support = self._get_support_strength(order)
-        return min_support + 1, max_support + 1
+    def _get_defend_strength(self, order, optimistic):
+        if not order.chess_path.valid:
+            return 0
+        return 1 + self._get_support_strength(order, optimistic)
         
-    def _get_attack_strength(self, order, order_at_landing):
-        result, certain = self._check_path(order)
-        if not result:
-            return 0, 0
+    def _get_attack_strength(self, order, order_at_landing, optimistic):
+        # self._debug_out(f"Getting attack strength of {order}")
+        if not self._check_path(order, optimistic):
+            return 0
         
         if order_at_landing is None:
-            min_support, max_support = self._get_support_strength(order)
-            return min_support + 1, max_support + 1
+            return 1 + self._get_support_strength(order, optimistic)
         elif (isinstance(order_at_landing, MoveOrder)
             and order_at_landing.get_landing_square() != order.get_starting_square()
-        ): # no head-to-head, piece is attempting to vacate square
-            success_at_landing = self._resolve(order_at_landing)
-            result, certain = _guess_and(success_at_landing, (result, certain))
-            if result and certain: # certain vacate success
-                min_support, max_support = self._get_support_strength(order)
-                return min_support + 1, max_support + 1
-            elif result: # guessed vacate success
-                max_support = self._get_guessed_support_strength(order)
-                return 0, max_support + 1
-            else: # vacate failure
-                return 0, 0
+            and self._resolve(order_at_landing, optimistic)
+        ): # no head-to-head, piece at landing moves
+            return 1 + self._get_support_strength(order, optimistic)
         elif order_at_landing.get_piece().get_power() == order.get_piece().get_power():
-            return 0, 0
-        else: # head-to-head
-            min_attack, max_attack = 1, 1
+            # piece at landing is from the same power
+            return 0
+        else: # head-to-head or failed move at landing
+            attack_strength = 1
             power_at_landing = order_at_landing.get_piece().get_power()
             for support_order in self._get_real_supports(order):
-                if support_order.get_piece().get_power() != power_at_landing:
-                    support_result, support_certain = self._resolve(support_order)
-                    if support_result:
-                        max_attack += 1
-                        if support_certain:
-                            min_attack += 1
-            return min_attack, max_attack
+                if (support_order.get_piece().get_power() != power_at_landing
+                    and self._resolve(support_order, optimistic)
+                ):
+                    attack_strength += 1
+            return attack_strength
     
-    def _get_convoy_strength(self, order):
-        min_convoy, max_convoy = self._get_support_strength(order)
-        return min_convoy, max_convoy
+    # def _get_convoy_strength(self, order, optimistic):
+    #     return self._get_support_strength(order, optimistic)
     
-    def _get_support_strength(self, order):
-        min_support, max_support = 0, 0
-        for support_order in self._get_real_supports(order):
-            support_result, support_certain = self._resolve(support_order)
-            if support_result:
-                max_support += 1
-                if support_certain:
-                    min_support += 1
-        return min_support, max_support
-    
-    def _get_guessed_support_strength(self, order):
+    def _get_support_strength(self, order, optimistic):
         support = 0
         for support_order in self._get_real_supports(order):
-            support_result, _ = self._resolve(support_order)
-            if support_result:
+            if self._resolve(support_order, optimistic):
                 support += 1
         return support
     
@@ -322,16 +354,21 @@ class Adjudicator:
                 ret.append(other_order)
         return ret
     
-    def _get_move_or_hold(self, square):
-        """
-        If there is a move order, return that. Otherwise, if there is a hold
-        order, return that. Otherwise, return None.
-        """
+    def _get_move(self, square):
         for order in self.orders:
             if isinstance(order, MoveOrder) and order.get_starting_square() == square:
                 return order
+        return None
+    
+    def _get_hold(self, square): # even a virtual hold
         for order in self.order_interface.get_orders():
             if isinstance(order, HoldOrder) and order.get_starting_square() == square:
+                return order
+        return None
+    
+    def _get_convoy(self, square):
+        for order in self.order_interface.get_orders():
+            if not order.get_virtual() and isinstance(order, ConvoyOrder) and order.get_starting_square() == square:
                 return order
         return None
     
@@ -339,35 +376,10 @@ class Adjudicator:
         """
         no convoys
         """
-        for other_order in self.orders:
-            if other_order.get_starting_square() == order.get_landing_square() and not isinstance(other_order, ConvoyOrder):
+        for other_order in self.order_interface.get_orders():
+            if not isinstance(other_order, ConvoyOrder) and other_order.get_starting_square() == order.get_landing_square():
                 return other_order
         return None
     
     def _get_real_supports(self, order):
         return [support_order for support_order in order.get_supports() if not support_order.get_virtual()]
-    
-# Guessing logic
-
-_certain_true = True, True
-_certain_false = False, True
-
-def _certain_not(p):
-    return (not p[0]) and p[1]
-
-def _guess_not(p):
-    return not p[0], p[1]
-
-def _guess_and(p, q):
-    if _certain_not(p) or _certain_not(q):
-        return _certain_false
-    else:
-        return p[0] and p[1], q[0] and q[1]
-
-def _guess_lt(a, b):
-    if a[1] < b[0]:
-        return _certain_true
-    elif a[0] >= b[1]:
-        return _certain_false
-    else:
-        return a[1] < b[1], False
