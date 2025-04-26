@@ -306,9 +306,9 @@ def test_6D19(GM):
 # 6.D.20. TEST CASE, UNIT CANNOT CUT SUPPORT OF ITS OWN COUNTRY
 def test_6D20(GM):
     GM.setup_pieces(england, ["Be2"])
-    GM.setup_pieces(italy, ["Ke1", "Bf1", "Nf3"])
+    GM.setup_pieces(italy, ["Ke1", "Bf1", "Rh1"])
     GM.process_orders(england, ["Be2 H"])
-    GM.process_orders(italy, ["Ke1 S Bf1 e2", "Bf1 e2", "Nf3 e1"])
+    GM.process_orders(italy, ["Ke1 e2", "Bf1 S Ke1 e2", "Rh1 f1"])
     GM.adjudicate()
 
 # 6.D.21. TEST CASE, DISLODGING DOES NOT CANCEL A SUPPORT CUT
@@ -399,7 +399,7 @@ def test_6D31(GM):
 
 # 6.D.32. TEST CASE, A MISSING FLEET: not relevant
 """
-Fleets cannot be missing in this variation
+Fleets cannot be missing in this variant
 """
 # 6.D.33. TEST CASE, UNWANTED SUPPORT ALLOWED
 def test_6D33(GM):
@@ -868,6 +868,26 @@ def test_6CD3(GM):
     GM.process_orders(italy, ["Re1 S e3 C Bf4 S d2"])
     GM.process_orders(france, ["Bf4 S d2 C Rc2 S e2"])
     GM.process_orders(scandinavia, ["Kd4 e3", "Nc4 S Kd4 e3"])
+    GM.adjudicate()
+
+# 6.CD.4. MULTIPLE CONVOYS FOR A MOVE
+def test_6CD4(GM):
+    GM.setup_pieces(england, ["Ra1"])
+    GM.process_orders(england, ["Ra1 a8"])
+    GM.adjudicate()
+
+# 6.CD.5. BLOCKED CONVOY
+def test_6CD5(GM):
+    GM.setup_pieces(england, ["Ra1", "Pa4"])
+    GM.process_orders(england, ["Ra1 a8", "Pa4 H"])
+    GM.adjudicate()
+
+# 6.CD.5. FAILED SUPPORT CONVOY
+def test_6CD6(GM):
+    GM.setup_pieces(england, ["Ra1", "Pa4", "Bd2"])
+    GM.setup_pieces(scandinavia, ["Kb6"])
+    GM.process_orders(england, ["Ra1 a8", "Pa4 H", "Bd2 S a5 C Ra1 a8"])
+    GM.process_orders(scandinavia, ["Kb6 a5"])
     GM.adjudicate()
 
 def test():
