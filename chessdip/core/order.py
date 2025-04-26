@@ -18,6 +18,9 @@ class Order:
     def __str__(self):
         pass
     
+    def short_str(self):
+        return self.__str__()
+    
     def get_piece(self):
         return self.piece
     
@@ -149,7 +152,7 @@ class ConvoyOrder(Order):
     
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
-        return prefix + f"{self.square} convoy {self.convoyed_order}"
+        return prefix + f"{self.square} convoy {self.convoyed_order.short_str()}"
     
     def get_starting_square(self):
         return self.square
@@ -210,6 +213,10 @@ class SupportHoldOrder(SupportOrder):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} support {self.supported_order}"
     
+    def short_str(self):
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.piece} support {self.supported_square}"
+    
     def get_args(self):
         return (self.piece, self.supported_order)
     
@@ -239,6 +246,10 @@ class SupportMoveOrder(SupportOrder):
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} support {self.supported_order}"
+    
+    def short_str(self):
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.piece} support {self.supported_square}"
     
     def get_args(self):
         return (self.piece, self.supported_order)
@@ -272,6 +283,10 @@ class SupportConvoyOrder(SupportOrder):
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} support {self.supported_order}"
+    
+    def short_str(self):
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.piece} support {self.supported_square}"
     
     def get_args(self):
         return (self.piece, self.supported_order)
