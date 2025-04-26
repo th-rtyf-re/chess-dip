@@ -203,7 +203,7 @@ The attack strength of a travel order is ½. This is to allow traveling to an em
 
 ### Defend strength
 
-The the path of a move order fails, then the defend strength of the move order is 0\.  
+If the path of a move order fails, then the defend strength of the move order is 0\.  
 The defend strength of an attack order is 1 plus the number of successful support-move orders.  
 The defend strength of a travel order is 0\.
 
@@ -213,7 +213,7 @@ If the path of a move order fails, then the prevent strength of the move order i
 If the move order is part of a head-to-head battle and the move order of the opposing piece is successful, then the prevent strength is 0\.  
 Otherwise, the prevent strength is 1 plus the number of successful support-move orders.
 
-The prevent strength of a convoy order is the number of successful support-convoy orders.
+If a convoy order fails, then its prevent strength it 0. Otherwise, its prevent strength is the number of successful support-convoy orders.
 
 ## Order success
 ### Convoy orders
@@ -231,7 +231,7 @@ Otherwise, it fails.
 A support order fails when the piece is dislodged, its path fails, or when another piece is ordered to attack the square of the supporting piece and the following conditions are satisfied:
 
 - The attacking piece is from a different power
-- The landing square of the supported piece is not the square of the piece attacking the support.
+- The landing square of the supported piece is not on the path of the piece attacking the support.
 - The attacking piece’s path is successful.
 
 Otherwise, it succeeds.
