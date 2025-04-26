@@ -2,7 +2,7 @@
 
 **Chess Dip** is Diplomacy played on a chess board. The mechanics are a balance of Diplomacy rules, chess moves, and interesting strategy. Each side of the board is divided into two powers, named after a classic chess opening or defense. Units are all possible chess pieces except for the queen. Pieces move and support following their chess moves: this includes castling and en passant\! Also, dislodged pieces are automatically disbanded.
 
-The major novelty is the introduction of multiple-square moves, like those of bishops and rooks (but not knights\!). Much like a convoy, for these moves to succeed, no intermediate square may be “dislodged”. To prevent dislodges, intermediate squares may be supported by a new move called support-convoying, similar to support-holds. There are also multiple-square supports, which can themselves be supported, and so on. A support-convoy on a failed multiple-square order also fails, so pieces cannot arbitrarily support-convoy squares.
+The major novelty is the introduction of multiple-square moves, like those of bishops and rooks (but not knights\!). Much like a convoy, for these moves to succeed, no intermediate square may be “dislodged”. To prevent dislodges, intermediate squares may be supported by a new move called support-convoying, similar to support-holds. There are also multiple-square supports, which can themselves be supported, and so on. If an intermediate square is dislodged, then all support-convoys on later squares in the multiple-square move fail. This is to prevent pieces from arbitrarily support-convoying squares.
 
 # Main course: the rules
 ## Setup
@@ -170,7 +170,10 @@ A piece is dislodged if it stays on its square and an attack order on its square
 
 ## Path
 
-The path of a move or support order is successful if there are no intermediate squares or if the convoy order of each intermediate square is successful. The path fails otherwise.
+All orders except for hold orders have a **path**.
+
+The path of a move or support order is successful if there are no intermediate squares or if the convoy order of each intermediate square is successful. The path fails otherwise.  
+The path of a convoy order is successful if all convoy orders for the same convoyed order that come before it are successful. The path fails otherwise.
 
 ## Strength computation
 
@@ -213,16 +216,17 @@ If the path of a move order fails, then the prevent strength of the move order i
 If the move order is part of a head-to-head battle and the move order of the opposing piece is successful, then the prevent strength is 0\.  
 Otherwise, the prevent strength is 1 plus the number of successful support-move orders.
 
-If a convoy order fails, then its prevent strength it 0. Otherwise, its prevent strength is the number of successful support-convoy orders.
+If the path of a convoy order fails, then the prevent strength of the convoy order is 0.  
+Otherwise, its prevent strength is the number of successful support-convoy orders.
 
 ## Order success
 ### Convoy orders
 
 A convoy order succeeds if the following conditions are satisfied:
 
-- The multiple-square order that it is convoying succeeds.
 - No piece stays on its square or successfully attacks its square.
 - Its prevent strength is greater than the prevent strength of any other convoy order on the same square.
+- The convoy orders for the same order that appear earlier in the convoyed order's path all succeed.
 
 Otherwise, it fails.
 
