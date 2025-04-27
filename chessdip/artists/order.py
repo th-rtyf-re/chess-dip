@@ -181,7 +181,7 @@ class SupportHoldOrderArtist(SupportOrderArtist):
     def __init__(self, order, supported_artist, global_kwargs):
         super().__init__(order, supported_artist, global_kwargs)
         
-        path = ChessPathArtist(order.chess_path).compute_path(shrinkA=self.shrinkA, shrinkB=self.supported_artist.radius)
+        path = ChessPathArtist(order.chess_path).compute_path(shrinkA=self.shrinkA, shrinkB=self.supported_artist.hold_radius)
         self.make_path_patches(path)
         self.set_virtual(order.virtual)
 
