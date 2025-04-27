@@ -11,9 +11,9 @@ class ChessPathArtist:
         self.chess_path = chess_path
         self.clockwise = clockwise
         
-    def compute_path(self, junction=None, shrink=0):
+    def compute_path(self, junction=None, shrinkA=0, shrinkB=0):
         if self.chess_path.valid:
-            vertices = self.compute_vertices(junction=junction, shrink=shrink)
+            vertices = self.compute_vertices(junction=junction, shrinkA=shrinkA, shrinkB=shrinkB)
             codes = [Path.MOVETO] + (len(vertices) - 1) * [Path.LINETO]
             path = Path(vertices, codes)
         else:
@@ -22,11 +22,12 @@ class ChessPathArtist:
                 x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
             else:
                 x1, y1 = junction
-            last_vertex = self._shrink_line((x0, y0), (x1, y1), shrink)
-            path = Path([(x0, y0), last_vertex], [Path.MOVETO, Path.LINETO])
+            v0 = self._shrink_line((x1, y1), (x0, y0), shrinkA)
+            v1 = self._shrink_line((x0, y0), (x1, y1), shrinkB)
+            path = Path([v0, v1], [Path.MOVETO, Path.LINETO])
         return path
     
-    def compute_vertices(self, junction=None, shrink=0):
+    def compute_vertices(self, junction=None, shrinkA=0, shrinkB=0):
         """
         `junction` is the location of the supported order's intersection with
         the landing square.
@@ -53,12 +54,14 @@ class ChessPathArtist:
                 bx, by = self._closest_corner((x1, y1), (x0, y0), clockwise=not self.clockwise)
                 connecting_vertices = self._connecting_vertices((ax, ay), (bx, by))
                 vertices.extend(connecting_vertices)
-            last_vertex = self._shrink_line(vertices[-1], (x1, y1), shrink)
+            last_vertex = self._shrink_line(vertices[-1], (x1, y1), shrinkB)
             vertices.append(last_vertex)
         else:
             ax, ay = self._closest_corner((x0, y0), junction)
             connecting_vertices = self._connecting_vertices((ax, ay), junction)
             vertices.extend(connecting_vertices)
+        v0 = self._shrink_line(vertices[1], vertices[0], shrinkA)
+        vertices[0] = v0
         return vertices
     
     def _closest_corner(self, square_center, target, clockwise=None):
@@ -118,6 +121,9 @@ class ChessPathArtist:
         return vertices
     
     def _shrink_line(self, start, end, shrink):
+        """
+        Shrink the point end towards start
+        """
         v_prev = np.asarray(start)
         v_next = np.asarray(end)
         direction = (v_next - v_prev)
