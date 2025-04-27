@@ -72,7 +72,7 @@ When adjudicating, multiple-square orders are treated like standard orders at th
 
 ### Castling
 
-There is one exception to these multiple-square orders: castling. Castling is only allowed for a king and rook on the first rank on the power’s side, with the king on the square where the power originally had a king (file d or e), and the rook in the corner. For England and Scandinavia, the moves are mirrored to what they would be on a standard chess board (ie king’s side and queen’s side castling are flipped). The two pieces must also have not successfully moved before: for instance, one may castle right after building a king and a rook. The king’s move has no intermediate square but the rook move does: the squares between its starting and landing squares except for the one where the king lands. Castling pieces have attack and defend strength 0, but succeed against empty squares. In other words, they cannot dislodge a piece: this is an example of a travel order, a new type of order that will be detailed in the pawn section. Castling is ordered with a special order:
+There is one exception to these multiple-square orders: castling. Castling is only allowed for a king and rook on the first rank on the power’s side, with the king on the square where the power originally had a king (file `d` or `e`), and the rook in the corner. For England and Scandinavia, the moves are mirrored to what they would be on a standard chess board (ie king’s side and queen’s side castling are flipped). The two pieces must also have not successfully moved before: for instance, one may castle right after building a king and a rook. The king’s move has no intermediate square but the rook move does: the squares between its starting and landing squares except for the one where the king lands. Castling pieces have attack and defend strength 0, but succeed against empty squares. In other words, they cannot dislodge a piece: this is an example of a travel order, a new type of order that will be detailed in the pawn section. Castling is ordered with a special order:
 
 > `O-O` or `O-O-O`,
 
@@ -143,11 +143,11 @@ The `(empty)` piece is used for convoy orders and when omitting the piece name f
 
 ## Special square names
 
-Each power begins with a king. The square that this king begins on is called the power’s king square. The square on the same rank and in file d or e adjacent to this square is called the power’s queen square. The squares on the same rank are then named after the closer of these two squares and the non-pawn piece that begins there in standard chess: we get the king/queen knight/bishop/rook squares.
+Each power begins with a king. The square that this king begins on is called the power’s **king square**. The square on the same rank and in file `d` or `e` adjacent to this square is called the power’s **queen square**. The squares on the same rank are then named after the closer of these two squares and the non-pawn piece that begins there in standard chess: we get the **king/queen knight/bishop/rook squares**.
 
 ## Order validation
 
-Consider an `<order>` submitted by a power.
+Consider an `<order>` submitted by a power.  
 First consider the case where the order is `<piece> <square> <action>`.
 - If `<piece>` is empty, then replace it with `P`.
 - If the `<piece>` is not on `<square>` or does not belong to the power, then the order is invalidated.
@@ -159,21 +159,22 @@ First consider the case where the order is `<piece> <square> <action>`.
         > `P<square0> t <square1>`  
         > `P<square0> x <square2>`,
 
-    and these orders are validated.
+        and these orders are validated.
     - Otherwise, if the order is of the form `P <square0> . <square1> .*` and the pawn could attack a piece on `<square1>`, then the order is validated.
+
 Now consider the case where the order is `<castle order>`.
 - If the order is `O-O`, there is a king on the power’s king square that has not moved yet, and there is a rook on the power’s king rook square that has not moved yet, then the order is replaced by
 
     > `K<king square> t <king knight square>`  
     > `R<king rook square> t <king bishop square>`,
 
-and these orders are validated.
+    and these orders are validated.
 - If the order is `O-O-O`, there is a king on the power’s king square that has not moved yet, and there is a rook on the power’s queen rook square that has not moved yet, then the order is replaced by
 
     > `K<king square> t <queen bishop square>`  
     > `R<king queen square> t <queen square>`,
 
-and these orders are validated.
+    and these orders are validated.
 In all other cases, the order is invalidated.
 
 ### Attack and travel orders
@@ -182,13 +183,15 @@ Powers order move orders. All move orders are attack orders EXCEPT for advancing
 
 ### Implicit convoy orders
 
-For bishop orders, rook orders, two-square pawn orders, and rook castling orders, there may be squares between the starting and landing square of the order on the same rank, file, or diagonal. These squares are called intermediate squares EXCEPT for the square where the castling king lands, for a rook castling order. If the order is `<piece> <square0> <convoy action code> <square1> .*` and `<square2>` is an intermediate square, then we add the order
+For bishop orders, rook orders, two-square pawn orders, and rook castling orders, there may be squares between the starting and landing square of the order on the same rank, file, or diagonal. These squares are called **intermediate squares** EXCEPT for the square where the castling king lands, for a rook castling order. If the order is `<piece> <square0> <convoy action code> <square1> .*` and `<square2>` is an intermediate square, then we add the order
     
 > `<square 2> C <square0> <convoy action code> <square1>`.
 
 ## Dislodges
 
-A piece is dislodged if it stays on its square and an attack order on its square succeeds.
+A piece is **dislodged** if it stays on its square and an attack order on its square succeeds.
+
+Dislodged pieces are automatically disbanded.
 
 ## Path
 
@@ -201,9 +204,11 @@ The path of a convoy order is successful if all convoy orders for the same convo
 
 **Strength** is a number associated to a square or order:
 
-- Squares have a **hold** strength.
-- Attack and travel orders have an **attack** strength, a **defend** strength, and a **prevent** strength.
-- Convoy orders have a **prevent** strength.
+- Squares have a [**hold** strength](#hold-strength).
+- Attack and travel orders have an [**attack** strength](#attack-strength), a [**defend** strength](#defend-strength), and a [**prevent** strength](#prevent-strength).
+- Convoy orders have a [**prevent** strength](#prevent-strength).
+
+## Head-to-head battle
 
 A **head-to-head battle** is a pair of move orders from different powers where the starting square of one order is the landing square of the other, and vice-versa. Note that head-to-head battles cannot involve intermediate squares: due to the way pieces move, any such intermediate square would receive multiple convoy orders, making at least one of the two moves fail immediately.
 
@@ -216,7 +221,7 @@ In all other cases, it is 1 plus the number of successful support-hold orders.
 ### Attack strength
 
 If the [path](#path) of the attack order fails, then the attack strength of the attack order is 0\.  
-Otherwise, if the landing square is empty, or if there is no head-to-head battle and the piece on the landing square successfully vacates the square, then the attack strength is:
+Otherwise, if the landing square is empty, or if there is no [head-to-head battle](#head-to-head-battle) and the piece on the landing square successfully vacates the square, then the attack strength is:
 
 - 0 if the attacking piece is a pawn
 - 1 plus the number of successful support-move orders otherwise.
@@ -235,7 +240,7 @@ The defend strength of a travel order is 0\.
 ### Prevent strength
 
 If the [path](#path) of a move order fails, then the prevent strength of the move order is 0\.  
-If the move order is part of a head-to-head battle and the move order of the opposing piece is successful, then the prevent strength is 0\.  
+If the move order is part of a [head-to-head battle](#head-to-head-battle) and the move order of the opposing piece is successful, then the prevent strength is 0\.  
 Otherwise, the prevent strength is 1 plus the number of successful support-move orders.
 
 If the [path](#path) of a convoy order fails, then the prevent strength of the convoy order is 0.  
@@ -254,7 +259,7 @@ Otherwise, it fails.
 
 ### Support orders
 
-A support order fails when the piece is dislodged, its [path](#path) fails, or when another piece is ordered to attack the square of the supporting piece and the following conditions are satisfied:
+A support order fails when the piece is [dislodged](#dislodges-1), its [path](#path) fails, or when another piece is ordered to attack the square of the supporting piece and the following conditions are satisfied:
 
 - The attacking piece is from a different power
 - The landing square of the supported piece is not on the path of the piece attacking the support.
@@ -264,9 +269,9 @@ Otherwise, it succeeds.
 
 ### Move orders
 
-In case of a head-to-head battle, a move order succeeds if its attack strength is larger than the defend strength of the opposing piece and larger than the prevent strength of any piece moving to the same square. Otherwise, it fails.
+In case of a [head-to-head battle](#head-to-head-battle), a move order succeeds if its [attack strength](#attack-strength) is larger than the [defend strength](#defend-strength) of the opposing piece and larger than the [prevent strength](#prevent-strength) of any piece moving to the same square. Otherwise, it fails.
 
-In case of no head-to-head battle, a move order succeeds if its attack strength is larger than the hold strength of the landing square and larger than the prevent strength of any piece moving to the same square. Otherwise, it fails.
+In case of no head-to-head battle, a move order succeeds if its [attack strength](#attack-strength) is larger than the [hold strength](#hold-strength) of the landing square and larger than the [prevent strength](#prevent-strength) of any piece moving to the same square. Otherwise, it fails.
 
 ### Exceptions
 
@@ -280,5 +285,5 @@ Pieces whose move order is successful are moved to the landing square of the mov
 
 A paradox is a set of orders with an ambiguous resolution, i.e. several or no solutions are possible. We adopt a standard way to address these:
 
-- Circular movement succeeds.
-- Szykman rule: given a paradox involving a convoy, the convoy fails.
+- **Circular movement:** if a set of pieces each moves to the square of another piece, then these moves succeed.
+- **Szykman rule:** if the paradox involves a convoy, the convoy fails.
