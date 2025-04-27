@@ -122,6 +122,9 @@ both support the en passant move. An en passant move succeeds when both the trav
 Finally, a pawn that is on the back rank in the fall phase must be promoted to a knight, bishop, or rook in the build phase. Moreover, if the pawn is on a supply center, then this supply center becomes a home center of the pawn’s power. Build and disband syntax is the same as in standard Diplomacy.
 
 # Dessert: an axiomatic approach
+
+This axiomatic approach is inspired, and copies a lot of, the [DATC text](https://webdiplomacy.net/doc/DATC_v3_0.html). This section is somewhat incomplete, but any undefined terms should have been informally defined in the [previous section](main-course-the-rules).
+
 ## Order syntax
 
 Players write `<order>`s, which are converted into `<true order>`s during order validation. Order syntax is presented below in a sort of Backus-Naur form:
@@ -175,6 +178,7 @@ Now consider the case where the order is `<castle order>`.
     > `R<king queen square> t <queen square>`,
 
     and these orders are validated.
+
 In all other cases, the order is invalidated.
 
 ### Attack and travel orders
@@ -200,6 +204,10 @@ All orders except for hold orders have a **path**.
 The path of a move or support order is successful if there are no intermediate squares or if the convoy order of each intermediate square is successful. The path fails otherwise.  
 The path of a convoy order is successful if all convoy orders for the same convoyed order that come before it are successful. The path fails otherwise.
 
+## Head-to-head battle
+
+A **head-to-head battle** is a pair of move orders from different powers where the starting square of one order is the landing square of the other, and vice-versa. Note that head-to-head battles cannot involve intermediate squares: due to the way pieces move, any such intermediate square would receive multiple convoy orders, making at least one of the two moves fail immediately.
+
 ## Strength computation
 
 **Strength** is a number associated to a square or order:
@@ -207,10 +215,6 @@ The path of a convoy order is successful if all convoy orders for the same convo
 - Squares have a [**hold** strength](#hold-strength).
 - Attack and travel orders have an [**attack** strength](#attack-strength), a [**defend** strength](#defend-strength), and a [**prevent** strength](#prevent-strength).
 - Convoy orders have a [**prevent** strength](#prevent-strength).
-
-## Head-to-head battle
-
-A **head-to-head battle** is a pair of move orders from different powers where the starting square of one order is the landing square of the other, and vice-versa. Note that head-to-head battles cannot involve intermediate squares: due to the way pieces move, any such intermediate square would receive multiple convoy orders, making at least one of the two moves fail immediately.
 
 ### Hold strength
 
