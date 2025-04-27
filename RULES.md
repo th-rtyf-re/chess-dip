@@ -2,11 +2,11 @@
 
 **Chess Dip** is Diplomacy played on a chess board. The mechanics are a balance of Diplomacy rules, chess moves, and interesting strategy. Each side of the board is divided into two powers, named after a classic chess opening or defense. Units are all possible chess pieces except for the queen. Pieces move and support following their chess moves: this includes [castling](#castling) and [en passant](#en-passant)\! Also, dislodged pieces are automatically disbanded.
 
-The major novelty is the introduction of [multiple-square orders](#multiple-square-orders), like those of bishops and rooks (but not knights\!). Much like a convoy, for these orders to succeed, no intermediate square may be “dislodged”. To prevent dislodges, intermediate squares may be supported by a new move called support-convoying, similar to support-holds. Both multiple-square moves and multiple-square supports are allowed. Multiple-square supports may themselves be supported, and so on. If an intermediate square is dislodged, then all support-convoys on later squares in the multiple-square order fail.
+The major novelty is the introduction of [multiple-square orders](#bishops-and-rooks-introducing-multiple-square-orders), like those of bishops and rooks (but not knights\!). Much like a convoy, for these orders to succeed, no intermediate square may be “dislodged”. To prevent dislodges, intermediate squares may be supported by a new move called support-convoying, similar to support-holds. Both multiple-square moves and multiple-square supports are allowed. Multiple-square supports may themselves be supported, and so on. If an intermediate square is dislodged, then all support-convoys on later squares in the multiple-square order fail.
 
 # Main course: the rules
 
-After describing the basic board and game setup, we progressively introduce pieces and mechanisms in a somewhat informal manner. The formal rules are found in the next section.
+After describing the basic board and game setup, we progressively introduce pieces and mechanisms in a somewhat informal manner. The formal rules are found in the [next section](#dessert-an-axiomatic-approach).
 
 ## Setup
 ### Board and win condition
@@ -37,9 +37,10 @@ Kings and knights move as they do in chess on an empty board; see the variant [C
 ### Orders
 
 Here are some examples of orders:
-> move: `Ke1 - e2`
-> hold: `Kd1 H`
-> support-move: `Ng1 S e1 - e2`
+
+> move: `Ke1 - e2`  
+> hold: `Kd1 H`  
+> support-move: `Ng1 S e1 - e2`  
 > support-hold: `Nc3 S d1 H`
 
 ### Dislodges
@@ -50,25 +51,31 @@ Dislodged pieces are automatically disbanded. We slightly modify the definition 
 
 Powers may build on any home center that they own. Home centers are the ones on the first two ranks on their side of the board: ranks `1` and `2` for England and Italy, and ranks `7` and `8` for France and Scandinavia. Some home centers can change ownership; this will be explained when pawns are introduced.
 
-## Bishops and rooks: introducing multiple-square orders {#multiple-square-orders}
+## Bishops and rooks: introducing multiple-square orders
 
 Bishops and rooks move as they do in chess; their supports follow the same paths. These paths have a starting square, a landing square, and potential intermediate squares, these last squares being those between the starting and landing square, on the same rank, file, or diagonal.
 
 ### Multiple-square orders
 
 A multiple-square order automatically issues a **convoy** order on each of its intermediate squares: such an order looks like
-> `e2 C f1 - c4` or
+
+> `e2 C f1 - c4` or  
 > `e2 C f1 S c4`,
+
 where in the second example `c4` is the *landing square* of the support order from `f1`. Note that convoys are ordered to squares, not pieces. Also note that a square may receive multiple convoy orders. Powers may not explicitly order such moves, but they may support them with a new type of support, the **support-convoy**. Such an order looks like
+
 > `Ke1 S e2 C f1 - c4`.
+
 The prevent strength of a convoy order is the number of successful support-convoys that it receives. A convoy order fails if a move order onto its square succeeds, taking into account the convoy order's prevent strength. A convoy order also fails if its prevent strength is less than that of another convoy order on the same square. 
 
 When adjudicating, multiple-square orders are treated like standard orders at their landing squares. Thus they can bounce, dislodge, etc.
 
-### Castling {#castling}
+### Castling
 
 There is one exception to these multiple-square orders: castling. Castling is only allowed for a king and rook on the first rank on the power’s side, with the king on the square where the power originally had a king (file d or e), and the rook in the corner. For England and Scandinavia, the moves are mirrored to what they would be on a standard chess board (ie king’s side and queen’s side castling are flipped). The two pieces must also have not successfully moved before: for instance, one may castle right after building a king and a rook. The king’s move has no intermediate square but the rook move does: the squares between its starting and landing squares except for the one where the king lands. Castling pieces have attack and defend strength 0, but succeed against empty squares. In other words, they cannot dislodge a piece: this is an example of a travel order, a new type of order that will be detailed in the pawn section. Castling is ordered with a special order:
+
 > `O-O` or `O-O-O`,
+
 corresponding to castling where the rook moves two or three squares, respectively. A castling order succeeds when both travel orders succeed.
 
 ## Pawns: all the exceptions
@@ -80,13 +87,14 @@ Pawns travel forwards but attack diagonally. When on the first two ranks of thei
 This unique behavior means that pawn orders are more complicated than for other pieces. We introduce a distinction between two types of move orders: **travel** orders and **attack** orders. Attack orders are the usual orders, and unless otherwise specified, move orders are attack orders. Travel orders have 0 attack and defend strength, but succeed against empty squares, and otherwise act like attack orders: they can be supported, bounced, etc.
 
 Pawns may only be ordered to travel forwards and attack or support diagonally, except for en passant; see below. Travel orders are ordered like move orders, and with pawn orders we typically omit the piece name:
+
 > `e2 - e4` is equivalent to `P e2 - e4`.
 
 ### Pawn attacks
 
 An attacking pawn only moves if it successfully dislodges a piece. So a pawn attack can succeed, say by preventing another piece from landing on the attacked square, but the pawn itself will not move. This is also relevant when attacking multiple-square moves: pawns can tap the intermediate squares but will not move there.
 
-### En passant {#en-passant}
+### En passant
 
 Pawns can also attack en passant, not only against pawns moving in the opposite direction, but also opponent pawns moving in the same direction. For en passant to be possible, the following conditions must hold:
 
@@ -94,13 +102,19 @@ Pawns can also attack en passant, not only against pawns moving in the opposite 
 - An opponent pawn can currently attack the intermediate square of the two-square move.
 
 For example, consider the following orders from the previous phase:
-> `d7 - d5`
+
+> `d7 - d5`  
 > `e4 - e5`
+
 In this case, the opponent pawn may receive an en passant order, which consists of an attack order on the passed pawn’s square and a travel order to the intermediate square. This is ordered as
+
 > `e5 t d6 x d5`.
+
 The attack and travel orders may be supported separately. For example, with the previous order.
-> `Kc3 S e5 x d5`
+
+> `Kc3 S e5 x d5`  
 > `e7 S e5 t d6`
+
 both support the en passant move. An en passant move succeeds when both the travel order and the attack order succeed. Note that a successful en passant order dislodges the passed pawn without actually occupying its square.
 
 ### Pawn promotion
@@ -133,28 +147,34 @@ Each power begins with a king. The square that this king begins on is called the
 
 ## Order validation
 
-- Consider an `<order>` submitted by a power.
-- First consider the case where the order is `<piece> <square> <action>`.
-    - If `<piece>` is empty, then replace it with `P`.
-    - If the `<piece>` is not on `<square>` or does not belong to the power, then the order is invalidated.
-    - If `<action> == H`, then the order is validated.
-    - Otherwise, the order is of the form `<piece> <square0> . <square1> .*`.
-        - If `<piece>` can move from `<square0>` to `<square1>` on an empty chess board, then the order is validated.
-        - If the order is of the form `P <square0> t <square1> x <square2>`, the pawn could attack a piece on `<square1>`, another pawn passed `<square1>` to land on `<square2>` with a two-square move on the previous order phase, then the order is replaced by
-            > `P<square0> t <square1>`
-            > `P<square0> x <square2>`,
-and these orders are validated.
+Consider an `<order>` submitted by a power.
+First consider the case where the order is `<piece> <square> <action>`.
+- If `<piece>` is empty, then replace it with `P`.
+- If the `<piece>` is not on `<square>` or does not belong to the power, then the order is invalidated.
+- If `<action> == H`, then the order is validated.
+- Otherwise, the order is of the form `<piece> <square0> . <square1> .*`.
+    - If `<piece>` can move from `<square0>` to `<square1>` on an empty chess board, then the order is validated.
+    - If the order is of the form `P <square0> t <square1> x <square2>`, the pawn could attack a piece on `<square1>`, another pawn passed `<square1>` to land on `<square2>` with a two-square move on the previous order phase, then the order is replaced by
+        
+        > `P<square0> t <square1>`  
+        > `P<square0> x <square2>`,
+
+    and these orders are validated.
     - Otherwise, if the order is of the form `P <square0> . <square1> .*` and the pawn could attack a piece on `<square1>`, then the order is validated.
-- Now consider the case where the order is `<castle order>`.
-    - If the order is `O-O`, there is a king on the power’s king square that has not moved yet, and there is a rook on the power’s king rook square that has not moved yet, then the order is replaced by
-        > `K<king square> t <king knight square>`
-        > `R<king rook square> t <king bishop square>`,
+Now consider the case where the order is `<castle order>`.
+- If the order is `O-O`, there is a king on the power’s king square that has not moved yet, and there is a rook on the power’s king rook square that has not moved yet, then the order is replaced by
+
+    > `K<king square> t <king knight square>`  
+    > `R<king rook square> t <king bishop square>`,
+
 and these orders are validated.
-    - If the order is `O-O-O`, there is a king on the power’s king square that has not moved yet, and there is a rook on the power’s queen rook square that has not moved yet, then the order is replaced by
-        > `K<king square> t <queen bishop square>`
-        > `R<king queen square> t <queen square>`,
+- If the order is `O-O-O`, there is a king on the power’s king square that has not moved yet, and there is a rook on the power’s queen rook square that has not moved yet, then the order is replaced by
+
+    > `K<king square> t <queen bishop square>`  
+    > `R<king queen square> t <queen square>`,
+
 and these orders are validated.
-- In all other cases, the order is invalidated.
+In all other cases, the order is invalidated.
 
 ### Attack and travel orders
 
@@ -163,13 +183,14 @@ Powers order move orders. All move orders are attack orders EXCEPT for advancing
 ### Implicit convoy orders
 
 For bishop orders, rook orders, two-square pawn orders, and rook castling orders, there may be squares between the starting and landing square of the order on the same rank, file, or diagonal. These squares are called intermediate squares EXCEPT for the square where the castling king lands, for a rook castling order. If the order is `<piece> <square0> <convoy action code> <square1> .*` and `<square2>` is an intermediate square, then we add the order
+    
 > `<square 2> C <square0> <convoy action code> <square1>`.
 
 ## Dislodges
 
 A piece is dislodged if it stays on its square and an attack order on its square succeeds.
 
-## Path {#path}
+## Path
 
 All orders except for hold orders have a **path**.
 
