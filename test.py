@@ -890,6 +890,27 @@ def test_6CD6(GM):
     GM.process_orders(scandinavia, ["Kb6 a5"])
     GM.adjudicate()
 
+# 6.CD.7. MOVING PIECE DOES NOT DISRUPT CONVOY
+def test_6CD7(GM):
+    GM.setup_pieces(italy, ["Bf1", "Pe2"])
+    GM.process_orders(italy, ["Bf1 d3", "Pe2 e4"])
+    GM.adjudicate()
+
+# 6.CD.8. SUPPORTING PIECE ON CONVOY PATH FAILS IN SOME CASES
+def test_6CD8(GM):
+    GM.setup_pieces(france, ["Pe7"])
+    GM.setup_pieces(scandinavia, ["Bc8", "Pd7"])
+    GM.process_orders(france, ["Pe7 e6"])
+    GM.process_orders(scandinavia, ["Bc8 S Pd7 e6", "Pd7 e6"])
+    GM.adjudicate()
+
+def test_6CD8A(GM):
+    GM.setup_pieces(france, ["Pe7"])
+    GM.setup_pieces(scandinavia, ["Bc8", "Pd7"])
+    GM.process_orders(france, ["Pe7 H"])
+    GM.process_orders(scandinavia, ["Bc8 S Pd7 e6", "Pd7 e6"])
+    GM.adjudicate()
+
 def test():
     global england, italy, france, scandinavia
     color_dict = {
@@ -937,6 +958,15 @@ def test():
 
 def sandbox():
     GM = GameManager()
+    color_dict = {
+        "opal": ("honeydew", "limegreen"),
+        "quartz": ("mistyrose", "darkred"),
+        "obsidian": ("royalblue", "k"),
+        "onyx": ("goldenrod", "k"),
+        "black": ("k", "k"),
+        "white": ("w", "w"),
+        "none": ("none", "k")
+    }
     england = GM.add_power("England", color_dict["quartz"], ("indianred", "lightsalmon"), Side.WHITE)
     italy = GM.add_power("Italy", color_dict["opal"], ("forestgreen", "lightgreen"), Side.WHITE)
     france = GM.add_power("France", color_dict["obsidian"], ("steelblue", "lightskyblue"), Side.BLACK)
