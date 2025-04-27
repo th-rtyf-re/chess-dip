@@ -827,17 +827,17 @@ To do
 To do
 """
 
-# 6.CD. CHESS DIP SPECIFIC CASES
-# 6.CD.1. TEST CASE, CROSSING CONVOYS
-def test_6CD1(GM):
+# CD.T. TEST CASES, CHESS DIP SPECIFIC CASES
+# CD.T.1. TEST CASE, CROSSING CONVOYS
+def test_CDT1(GM):
     GM.setup_pieces(england, ["Bb1"])
     GM.setup_pieces(italy, ["Bf1"])
     GM.process_orders(england, ["Bb1 e4"])
     GM.process_orders(italy, ["Bf1 c4"])
     GM.adjudicate()
 
-# 6.CD.2. CIRCULAR CONVOY SUPPORT
-def test_6CD2(GM):
+# CD.T.2. TEST CASE, CIRCULAR CONVOY SUPPORT
+def test_CDT2(GM):
     GM.setup_pieces(england, ["Rc2"])
     GM.setup_pieces(italy, ["Re1"])
     GM.setup_pieces(france, ["Bf4"])
@@ -846,8 +846,8 @@ def test_6CD2(GM):
     GM.process_orders(france, ["Bf4 S d2 C Rc2 S e2"])
     GM.adjudicate()
 
-# 6.CD.3. ATTACKED CIRCULAR CONVOY SUPPORT
-def test_6CD2(GM):
+# CD.T.3. TEST CASE, ATTACKED CIRCULAR CONVOY SUPPORT
+def test_CDT2(GM):
     GM.setup_pieces(england, ["Rc2"])
     GM.setup_pieces(italy, ["Re1"])
     GM.setup_pieces(france, ["Bf4"])
@@ -858,8 +858,8 @@ def test_6CD2(GM):
     GM.process_orders(scandinavia, ["Kd4 e3"])
     GM.adjudicate()
 
-# 6.CD.3. DISRUPTED CIRCULAR CONVOY SUPPORT
-def test_6CD3(GM):
+# CD.T.3. TEST CASE, DISRUPTED CIRCULAR CONVOY SUPPORT
+def test_CDT3(GM):
     GM.setup_pieces(england, ["Rc2"])
     GM.setup_pieces(italy, ["Re1"])
     GM.setup_pieces(france, ["Bf4"])
@@ -870,46 +870,76 @@ def test_6CD3(GM):
     GM.process_orders(scandinavia, ["Kd4 e3", "Nc4 S Kd4 e3"])
     GM.adjudicate()
 
-# 6.CD.4. MULTIPLE CONVOYS FOR A MOVE
-def test_6CD4(GM):
+# CD.T.4. TEST CASE, MULTIPLE CONVOYS FOR A MOVE
+def test_CDT4(GM):
     GM.setup_pieces(england, ["Ra1"])
     GM.process_orders(england, ["Ra1 a8"])
     GM.adjudicate()
 
-# 6.CD.5. BLOCKED CONVOY
-def test_6CD5(GM):
+# CD.T.5. TEST CASE, BLOCKED CONVOY
+def test_CDT5(GM):
     GM.setup_pieces(england, ["Ra1", "Pa4"])
     GM.process_orders(england, ["Ra1 a8", "Pa4 H"])
     GM.adjudicate()
 
-# 6.CD.5. FAILED SUPPORT CONVOY
-def test_6CD6(GM):
+# CD.T.5. TEST CASE, FAILED SUPPORT CONVOY
+def test_CDT6(GM):
     GM.setup_pieces(england, ["Ra1", "Pa4", "Bd2"])
     GM.setup_pieces(scandinavia, ["Kb6"])
     GM.process_orders(england, ["Ra1 a8", "Pa4 H", "Bd2 S a5 C Ra1 a8"])
     GM.process_orders(scandinavia, ["Kb6 a5"])
     GM.adjudicate()
 
-# 6.CD.7. MOVING PIECE DOES NOT DISRUPT CONVOY
-def test_6CD7(GM):
+# CD.T.7. TEST CASE, MOVING PIECE DOES NOT DISRUPT CONVOY
+def test_CDT7(GM):
     GM.setup_pieces(italy, ["Bf1", "Pe2"])
     GM.process_orders(italy, ["Bf1 d3", "Pe2 e4"])
     GM.adjudicate()
 
-# 6.CD.8. SUPPORTING PIECE ON CONVOY PATH FAILS IN SOME CASES
-def test_6CD8(GM):
+# CD.T.8. TEST CASE, SUPPORTING PIECE ON CONVOY PATH FAILS IN SOME CASES
+def test_CDT8(GM):
     GM.setup_pieces(france, ["Pe7"])
     GM.setup_pieces(scandinavia, ["Bc8", "Pd7"])
     GM.process_orders(france, ["Pe7 e6"])
     GM.process_orders(scandinavia, ["Bc8 S Pd7 e6", "Pd7 e6"])
     GM.adjudicate()
 
-def test_6CD8A(GM):
+def test_CDT8A(GM):
     GM.setup_pieces(france, ["Pe7"])
     GM.setup_pieces(scandinavia, ["Bc8", "Pd7"])
     GM.process_orders(france, ["Pe7 H"])
     GM.process_orders(scandinavia, ["Bc8 S Pd7 e6", "Pd7 e6"])
     GM.adjudicate()
+
+# CD.V. CHESS DIP VISUALIZER TESTS
+# CD.V.1. VISUAL TEST, OVERLAPPING SUPPORTS
+def test_CDV1(GM):
+    GM.setup_pieces(england, ["Kd1", "Bc1", "Nb1", "Ra2", "Be3"])
+    GM.process_orders(england, ["Kd1 S Be3 d2", "Bc1 S Be3 d2", "Nb1 S Be3 d2", "Ra2 S Be3 d2", "Be3 d2"])
+
+def test_CDV1A(GM):
+    GM.setup_pieces(england, ["Kd1", "Bc1", "Nb1", "Ra2", "Be1"])
+    GM.setup_pieces(italy, ["Rh2"])
+    GM.process_orders(england, ["Kd1 S Be1 d2", "Bc1 S Be1 d2", "Nb1 S Be1 d2", "Ra2 S Be1 d2", "Be1 d2"])
+    GM.process_orders(italy, ["Rh2 S Ra2 H"])
+
+def test_CDV1B(GM):
+    GM.setup_pieces(england, ["Kd1", "Bc1", "Nb1", "Ra2", "Bc3"])
+    GM.process_orders(england, ["Kd1 S Bc3 d2", "Bc1 S Bc3 d2", "Nb1 S Bc3 d2", "Ra2 S Bc3 d2", "Bc3 d2"])
+
+def test_CDV1C(GM):
+    GM.setup_pieces(england, ["Kd1", "Bc1", "Nb1", "Ra2", "Re2"])
+    GM.process_orders(england, ["Kd1 S Re2 d2", "Bc1 S Re2 d2", "Nb1 S Re2 d2", "Ra2 S Re2 d2", "Re2 d2"])
+
+def test_CDV1D(GM):
+    GM.setup_pieces(england, ["Kd1", "Bc1", "Nb1", "Ra2", "Rd3"])
+    GM.process_orders(england, ["Kd1 S Rd3 d2", "Bc1 S Rd3 d2", "Nb1 S Rd3 d2", "Ra2 S Rd3 d2", "Rd3 d2"])
+
+
+# CD.V.2. VISUAL TEST, OPPOSING MOVEMENT
+def test_CDV2(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1"])
+    GM.process_orders(england, ["Kd1 c1", "Ra1 e1"])
 
 def test():
     global england, italy, france, scandinavia
@@ -937,19 +967,30 @@ def test():
         message = GM.console.input("> ").lower().replace(' ','')
         if not message:
             continue
-        if message[0] == '6':
-            message = message[1:]
-        
         if message == "quit":
             return
         elif message == "clear":
             GM.clear_board()
         elif message == "progress":
             GM.progress()
-        else:
+        else: # find test and run it
+            if len(message) < 2:
+                continue
+            elif message[0] == '6':
+                message = message[1:]
+            elif message[:1] == "cd":
+                message = message[2:]
+            
+            if len(message) < 2:
+                continue
+            elif message[0] in "abcdefghij" and message[1].isnumeric():
+                message = "6" + message
+            elif message[0] in "tv" and message[1].isnumeric():
+                message = "cd" + message
+            
             GM.clear_board()
             try:
-                eval(f"test_6{message.upper()}(GM)")
+                eval(f"test_{message.upper()}(GM)")
             except NameError as inst:
                 GM.console.out(f"Could not find test {message}! {inst}")
             except ValueError as inst:
