@@ -123,7 +123,7 @@ Finally, a pawn that is on the back rank in the fall phase must be promoted to a
 
 # Dessert: an axiomatic approach
 
-This axiomatic approach is inspired, and copies a lot of, the [DATC text](https://webdiplomacy.net/doc/DATC_v3_0.html). This section is somewhat incomplete, but any undefined terms should have been informally defined in the [previous section](main-course-the-rules).
+This axiomatic approach is inspired, and copies a lot of, the [DATC text](https://webdiplomacy.net/doc/DATC_v3_0.html). This section is somewhat incomplete, but any undefined terms should have been informally defined in the [previous section](#main-course-the-rules).
 
 ## Order syntax
 
