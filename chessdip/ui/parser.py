@@ -77,6 +77,18 @@ class Parser:
                     _square(m["convoy_landing_square"])
                 )
                 return SupportConvoyOrder, args
+        elif m["en_passant"] is not None:
+            args = (
+                "en_passant",
+                _square(m["starting_square"]),
+                _square(m["ep_travel_square"]),
+                _square(m["ep_attack_square"])
+            )
+            return OrderLinker, args
+        elif m["long_castle"] is not None:
+            return OrderLinker, ("long_castle",)
+        elif m["short_castle"] is not None:
+            return OrderLinker, ("short_castle",)
         elif m["build_piece"] is not None:
             args = (_square(m["build_square"]), m["build_piece"])
             return BuildOrder, args

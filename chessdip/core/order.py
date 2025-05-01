@@ -1,6 +1,7 @@
 # -*-coding:utf8-*-
 
 from chessdip.board.chess_path import ChessPath
+from chessdip.board.piece import Piece
 
 class Order:
     def __init__(self, piece, *other_args, virtual=False):
@@ -107,11 +108,19 @@ class HoldOrder(Order):
         return True
 
 class MoveOrder(Order):
-    def __init__(self, piece, landing_square, virtual=False):
+    MOVE = 0
+    ATTACK = 1
+    TRAVEL = 2
+    
+    def __init__(self, piece, landing_square, virtual=False, move_type=MOVE, exception=None):
+        """
+        move_type is ATTACK or TRAVEL when it is only one of these types.
+        """
         super().__init__(piece, landing_square, virtual=virtual)
         
         self.landing_square = landing_square
-        self.chess_path = ChessPath(piece, self.landing_square)
+        self.chess_path = ChessPath(piece, self.landing_square, exception=exception)
+        self.move_type = move_type
         
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
@@ -126,6 +135,12 @@ class MoveOrder(Order):
     def get_intermediate_squares(self):
         return self.chess_path.intermediate_squares
     
+    def is_attack(self):
+        return self.move_type == MoveOrder.ATTACK
+    
+    def is_travel(self):
+        return self.move_type == MoveOrder.TRAVEL
+    
     def execute(self, board, console):
         if self.virtual:
             return False
@@ -135,8 +150,16 @@ class MoveOrder(Order):
         elif not self.chess_path.valid:
             console.out(f"{self.piece} cannot move to {self.landing_square}.")
             return False
-        board.move_piece_to(self.piece, self.landing_square)
-        board.set_ownership(self.landing_square, self.piece.power)
+        # Successful move
+        if self.piece.code == Piece.PAWN and board.get_piece(self.landing_square) is None:
+            console.out(f"{self.piece} successfully attacked, but does not move to, {self.landing_square}.")
+            return True
+        
+        if not self.is_attack():
+            board.move_piece_to(self.piece, self.landing_square)
+            board.set_ownership(self.landing_square, self.piece.power)
+        if self.piece.code == Piece.PAWN and self.get_intermediate_squares():
+            board.mark_en_passant(self.piece, self.get_intermediate_squares()[0]) 
         console.out(f"{self.piece} moved to {self.landing_square}.")
         return True
 
@@ -307,6 +330,71 @@ class SupportConvoyOrder(SupportOrder):
             console.out(f"{self.piece} cannot support {self.supported_order}.")
             return False
         console.out(f"{self.piece} supported {self.supported_order}.")
+        return True
+
+class OrderLinker:
+    def __init__(self, orders=None):
+        if orders is None:
+            orders = []
+        self.orders = orders
+        
+        self.success = False
+    
+    def __str__(self):
+        return f"Linker for: " + ", ".join([str(order) for order in self.orders])
+    
+    def get_orders(self):
+        return self.orders
+    
+    def set_orders(self, orders):
+        self.orders = orders
+    
+    def add_order(self, order):
+        self.orders.append(order)
+    
+    def remove_order(self, order):
+        if order in self.orders:
+            self.orders.remove(order)
+    
+    def get_success(self, success):
+        return self.success
+    
+    def set_success(self, success):
+        self.success = success
+
+class LinkedOrder:
+    def __init__(self, linker):
+        self.linker = linker
+        self.linker.add_order(self)
+    
+    def get_linker(self):
+        return self.linker
+    
+    def set_virtual(self, virtual):
+        for order in self.linker.get_orders():
+            super(LinkedOrder, order).set_virtual(virtual)
+
+class LinkedMoveOrder(LinkedOrder, MoveOrder):
+    def __init__(self, linker, piece, landing_square, virtual=False, move_type=MoveOrder.MOVE, exception=None):
+        MoveOrder.__init__(self, piece, landing_square, virtual=virtual, move_type=move_type, exception=exception)
+        LinkedOrder.__init__(self, linker)
+        
+    def __str__(self):
+        prefix = "[virtual] " if self.virtual else ""
+        return prefix + f"{self.piece} linked move to {self.landing_square}"
+    
+    def execute(self, board, console):
+        if self.virtual:
+            return False
+        elif not self.success:
+            console.out(f"{self.piece} failed to move.")
+            return False
+        elif not self.chess_path.valid:
+            console.out(f"{self.piece} cannot move to {self.landing_square}.")
+            return False
+        board.move_piece_to(self.piece, self.landing_square)
+        board.set_ownership(self.landing_square, self.piece.power)
+        console.out(f"{self.piece} moved to {self.landing_square}.")
         return True
 
 class BuildOrder(Order):

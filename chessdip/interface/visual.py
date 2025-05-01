@@ -110,4 +110,3 @@ class VisualInterface:
                 return 1.35
         else:
             return 1.
-        

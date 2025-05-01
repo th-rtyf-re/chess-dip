@@ -1,6 +1,7 @@
 # -*-coding:utf8-*-
 
 from chessdip.core.order import *
+from chessdip.artists.chess_path import *
 
 class OrderInterface:
     """
@@ -15,6 +16,16 @@ class OrderInterface:
     
     def get_orders(self):
         return self.artists.keys()
+    
+    def get_adjudicable_orders(self):
+        orders = []
+        for order in self.get_orders():
+            if not order.get_virtual() and not isinstance(order, HoldOrder):
+                if isinstance(order, LinkedOrder) and order.get_linker() not in orders:
+                    orders.append(order.get_linker())
+                else:
+                    orders.append(order)
+        return orders
     
     def clear(self):
         for _, artist in self.artists.items():
@@ -35,6 +46,8 @@ class OrderInterface:
     def remove(self, order):
         self.artists[order].remove() # From visualizer
         del self.artists[order]
+        if isinstance(order, LinkedOrder):
+            order.get_linker().remove_order(order)
         self.visualizer.set_stale()
     
     def set_virtual(self, order, virtual=True):
@@ -68,6 +81,14 @@ class OrderInterface:
             convoy_order.set_virtual(order.get_virtual())
     
     def set_success(self, order, success):
+        if isinstance(order, OrderLinker):
+            orders = order.get_orders()
+        else:
+            orders = [order]
+        for order in orders:
+            self._set_success_single_order(order, success)
+    
+    def _set_success_single_order(self, order, success):
         order.set_success(success)
         self.artists[order].set_success(success)
         supported_order = order.get_supported_order()
@@ -75,4 +96,14 @@ class OrderInterface:
             self.artists[supported_order].set_support_success(self.artists[order], success)
         for convoy_order in order.get_convoys():
             self.set_success(convoy_order, success)
+        self.visualizer.set_stale()
+    
+    def recompute_paths(self):
+        CPAM = ChessPathArtistManager(self.visualizer)
+        for order, artist in self.artists.items():
+            if not isinstance(order, HoldOrder | BuildOrder | DisbandOrder | ConvoyOrder):
+                CPAM.add_path(artist.path_artist)
+        for order, artist in self.artists.items():
+            if not isinstance(order, HoldOrder | BuildOrder | DisbandOrder | ConvoyOrder):
+                artist.update_path(CPAM.get_path_from_vectors(artist.path_artist))
         self.visualizer.set_stale()

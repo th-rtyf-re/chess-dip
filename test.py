@@ -911,6 +911,167 @@ def test_CDT8A(GM):
     GM.process_orders(scandinavia, ["Bc8 S Pd7 e6", "Pd7 e6"])
     GM.adjudicate()
 
+# CD.T.9. TEST CASE, KINGSIDE CASTLE
+def test_CDT9(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1"])
+    GM.setup_pieces(italy, ["Ke1", "Rh1"])
+    GM.setup_pieces(france, ["Ke8", "Rh8"])
+    GM.setup_pieces(scandinavia, ["Kd8", "Ra8"])
+    GM.process_orders(england, ["O-O"])
+    GM.process_orders(italy, ["O-O"])
+    GM.process_orders(france, ["O-O"])
+    GM.process_orders(scandinavia, ["O-O"])
+
+# CD.T.10. TEST CASE, QUEENSIDE CASTLE
+def test_CDT10(GM):
+    GM.setup_pieces(england, ["Kd1", "Rh1"])
+    GM.setup_pieces(france, ["Ke8", "Ra8"])
+    GM.process_orders(england, ["O-O-O"])
+    GM.process_orders(france, ["O-O-O"])
+
+def test_CDT10A(GM):
+    GM.setup_pieces(italy, ["Ke1", "Ra1"])
+    GM.setup_pieces(scandinavia, ["Kd8", "Rh8"])
+    GM.process_orders(italy, ["O-O-O"])
+    GM.process_orders(scandinavia, ["O-O-O"])
+
+# CD.T.11. TEST CASE, INTERRUPTED CASTLE
+def test_CDT11(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1"])
+    GM.setup_pieces(scandinavia, ["Kc2"])
+    GM.process_orders(england, ["O-O"])
+    GM.process_orders(scandinavia, ["Kc2 c1"])
+    GM.adjudicate()
+
+# CD.T.12. TEST CASE, SUPPORTED CASTLE WILL BOUNCE
+def test_CDT12(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1", "Bd2"])
+    GM.setup_pieces(scandinavia, ["Kc2"])
+    GM.process_orders(england, ["O-O", "Bd2 S Ra1 c1"])
+    GM.process_orders(scandinavia, ["Kc2 c1"])
+    GM.adjudicate()
+
+# CD.T.13. TEST CASE, SUFFICIENTLY SUPPORTED CASTLE SUCCEEDS
+def test_CDT13(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1", "Bd2", "Nb3"])
+    GM.setup_pieces(scandinavia, ["Kc2"])
+    GM.process_orders(england, ["O-O", "Bd2 S Ra1 c1", "Nb3 S Ra1 c1"])
+    GM.process_orders(scandinavia, ["Kc2 c1"])
+    GM.adjudicate()
+
+# CD.T.14. TEST CASE, INTERRUPTED PAWN ADVANCE
+def test_CDT14(GM):
+    GM.setup_pieces(england, ["Pc2"])
+    GM.setup_pieces(scandinavia, ["Rc8"])
+    GM.process_orders(england, ["Pc2 c3"])
+    GM.process_orders(scandinavia, ["Rc8 c3"])
+    GM.adjudicate()
+
+# CD.T.15. TEST CASE, SUPPORTED PAWN ADVANCE WILL BOUNCE
+def test_CDT15(GM):
+    GM.setup_pieces(england, ["Pc2", "Nb1"])
+    GM.setup_pieces(scandinavia, ["Rc8"])
+    GM.process_orders(england, ["Pc2 c3", "Nb1 S Pc2 c3"])
+    GM.process_orders(scandinavia, ["Rc8 c3"])
+    GM.adjudicate()
+
+# CD.T.16. TEST CASE, SUFFICIENTLY SUPPORTED PAWN ADVANCE SUCCEEDS
+def test_CDT16(GM):
+    GM.setup_pieces(england, ["Pc2", "Nb1", "Kd2"])
+    GM.setup_pieces(scandinavia, ["Rc8"])
+    GM.process_orders(england, ["Pc2 c3", "Nb1 S Pc2 c3", "Kd2 S Pc2 c3"])
+    GM.process_orders(scandinavia, ["Rc8 c3"])
+    GM.adjudicate()
+
+# CD.T.17. TEST CASE, IMPOSSIBLE CASTLE
+def test_CDT17(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1"])
+    GM.setup_pieces(scandinavia, ["Kc1"])
+    GM.process_orders(england, ["O-O"])
+    GM.process_orders(scandinavia, ["Kc1 b1"])
+    GM.adjudicate()
+
+# CD.T.18. TEST CASE, SUPPORTED CASTLE CAN DISLODGE
+def test_CDT18(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1", "Bd2", "Nc3"])
+    GM.setup_pieces(italy, ["Bd3", "Ne2"])
+    GM.setup_pieces(scandinavia, ["Kc1"])
+    GM.process_orders(england, ["O-O", "Bd2 S Ra1 c1", "Nc3 S Kd1 b1"])
+    GM.process_orders(italy, ["Bd3 S Kd1 b1", "Ne2 S Ra1 c1"])
+    GM.process_orders(scandinavia, ["Kc1 b1"])
+    GM.adjudicate()
+
+# CD.T.19. TEST CASE, CASTLE CIRCULAR MOVEMENT
+def test_CDT19(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1"])
+    GM.setup_pieces(scandinavia, ["Kc1"])
+    GM.process_orders(england, ["O-O"])
+    GM.process_orders(scandinavia, ["Kc1 d1"])
+    GM.adjudicate()
+
+# CD.T.20. TEST CASE, CASTLE DOUBLE CIRCULAR MOVEMENT
+def test_CDT20(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1"])
+    GM.setup_pieces(scandinavia, ["Kd2", "Rc1", "Bc3", "Nb1"])
+    GM.process_orders(england, ["O-O"])
+    GM.process_orders(scandinavia, ["Kd2 d1", "Rc1 c3", "Bc3 a1", "Nb1 d2"])
+    GM.adjudicate()
+
+# CD.T.21. TEST CASE, CASTLE DOUBLE CIRCULAR MOVEMENT, ONE FAILURE IMPLIES THE OTHER
+def test_CDT21(GM):
+    GM.setup_pieces(england, ["Kd1", "Ra1"])
+    GM.setup_pieces(scandinavia, ["Kd2", "Rc1", "Bc3", "Nb1"])
+    GM.setup_pieces(italy, ["Ke1"])
+    GM.process_orders(england, ["O-O"])
+    GM.process_orders(scandinavia, ["Kd2 d1", "Rc1 c3", "Bc3 a1", "Nb1 d2"])
+    GM.process_orders(italy, ["Ke1 d2"])
+    GM.adjudicate()
+
+# CD.T.22. TEST CASE, EN PASSANT
+def test_CDT22(GM):
+    GM.setup_pieces(england, ["Pd5", "Ba3"])
+    GM.setup_pieces(scandinavia, ["Pc7"])
+    GM.process_orders(scandinavia, ["Pc7 c5"])
+    GM.progress()
+    GM.process_orders(england, ["Pd5 t c6 x c5", "Ba3 S Pd5 x c5"])
+    GM.adjudicate()
+
+# CD.T.23. TEST CASE, BLOCKING EN PASSANT
+def test_CDT23(GM):
+    GM.setup_pieces(england, ["Pd5", "Ba3"])
+    GM.setup_pieces(scandinavia, ["Pc7"])
+    GM.process_orders(scandinavia, ["Pc7 c5"])
+    GM.progress()
+    GM.process_orders(scandinavia, ["Nb8 c6"])
+    GM.process_orders(england, ["Pd5 t c6 x c5", "Ba3 S Pd5 x c5"])
+    GM.adjudicate()
+
+# CD.T.24. TEST CASE, EN PASSANT REQUIRES TWO PHASES
+def test_CDT24(GM):
+    GM.setup_pieces(england, ["Pd5", "Ba3"])
+    GM.setup_pieces(scandinavia, ["Pc7", "Nb8"])
+    GM.process_orders(england, ["Pd5 t c6 x c5", "Ba3 S Pd5 x c5"])
+    GM.process_orders(scandinavia, ["Pc7 c5"])
+    GM.adjudicate()
+
+# CD.T.25. TEST CASE, EN PASSANT REQUIRES TWO CONSECUTIVE PHASES
+def test_CDT25(GM):
+    GM.setup_pieces(england, ["Pd5", "Ba3"])
+    GM.setup_pieces(scandinavia, ["Pc7"])
+    GM.process_orders(scandinavia, ["Pc7 c5"])
+    GM.progress()
+    GM.progress()
+    GM.process_orders(england, ["Pd5 t c6 x c5", "Ba3 S Pd5 x c5"])
+    GM.adjudicate()
+
+# CD.T.26. TEST CASE, PAWN CANNOT TRAVEL WITHOUT DISLODGING
+def test_CDT26(GM):
+    GM.setup_pieces(italy, ["Bc4", "Pe4"])
+    GM.setup_pieces(scandinavia, ["Pc6"])
+    GM.process_orders(italy, ["Bc4 S Pe4 d5", "Pe4 d5"])
+    GM.process_orders(scandinavia, ["Pc6 d5"])
+    GM.adjudicate()
+
 # CD.V. CHESS DIP VISUALIZER TESTS
 # CD.V.1. VISUAL TEST, OVERLAPPING SUPPORTS
 def test_CDV1(GM):
@@ -955,10 +1116,10 @@ def test():
     
     GM = GameManager()
     GM.console.out("Run DATC tests.")
-    england = GM.add_power("England", color_dict["quartz"], ("indianred", "lightsalmon"), Side.WHITE)
+    england = GM.add_power("England", color_dict["quartz"], ("indianred", "lightsalmon"), Side.WHITE, d_king=True)
     italy = GM.add_power("Italy", color_dict["opal"], ("forestgreen", "lightgreen"), Side.WHITE)
     france = GM.add_power("France", color_dict["obsidian"], ("steelblue", "lightskyblue"), Side.BLACK)
-    scandinavia = GM.add_power("Scandinavia", color_dict["onyx"], ("darkgoldenrod", "palegoldenrod"), Side.BLACK)
+    scandinavia = GM.add_power("Scandinavia", color_dict["onyx"], ("darkgoldenrod", "palegoldenrod"), Side.BLACK, d_king=True)
     
     GM.visualizer.ion()
     GM.visualizer.show()
@@ -989,12 +1150,13 @@ def test():
                 message = "cd" + message
             
             GM.clear_board()
-            try:
-                eval(f"test_{message.upper()}(GM)")
-            except NameError as inst:
-                GM.console.out(f"Could not find test {message}! {inst}")
-            except ValueError as inst:
-                GM.console.out(f"yeah, {inst}")
+            # try:
+            eval(f"test_{message.upper()}(GM)")
+            GM.sandbox()
+            # except NameError as inst:
+            #     GM.console.out(f"Could not find test {message}! {inst}")
+            # except ValueError as inst:
+            #     GM.console.out(f"yeah, {inst}")
 
 
 def sandbox():
@@ -1008,20 +1170,14 @@ def sandbox():
         "white": ("w", "w"),
         "none": ("none", "k")
     }
-    england = GM.add_power("England", color_dict["quartz"], ("indianred", "lightsalmon"), Side.WHITE)
+    england = GM.add_power("England", color_dict["quartz"], ("indianred", "lightsalmon"), Side.WHITE, d_king=True)
     italy = GM.add_power("Italy", color_dict["opal"], ("forestgreen", "lightgreen"), Side.WHITE)
     france = GM.add_power("France", color_dict["obsidian"], ("steelblue", "lightskyblue"), Side.BLACK)
-    scandinavia = GM.add_power("Scandinavia", color_dict["onyx"], ("darkgoldenrod", "palegoldenrod"), Side.BLACK)
+    scandinavia = GM.add_power("Scandinavia", color_dict["onyx"], ("darkgoldenrod", "palegoldenrod"), Side.BLACK, d_king=True)
     GM.setup_pieces(england, ["K d1", "P c2", "N b1", "Ra1"])
     GM.setup_pieces(italy, ["K e1", "P e2", "B f1", "Rh1"])
-    # GM.setup_pieces(italy, ["K e1", "P e2", "B f1", "Rg1"])
     GM.setup_pieces(france, ["K e8", "P e7", "N g8", "Rh8"])
     GM.setup_pieces(scandinavia, ["K d8", "P d7", "B c8", "Ra8"])
-    
-    # GM.process_orders(italy, ["f1sh3ch1sh8", "h1sh8h", "h1sa8h8"])
-    # GM.process_orders(powers[2], ["g1sg8ch8f8", "g1sg8ch8sf8", "g1sg8ch8e8"])
-    # GM.process_orders(powers[2], ["g1sg8ch8se8", "g1sg8ch8se8"])
-    # GM.process_orders(italy, ["h1sh8h", "f1sh3ch1sh8", "f1sh3ch1h8", "h1h8"])
     GM.sandbox()
 
 if __name__ == "__main__":

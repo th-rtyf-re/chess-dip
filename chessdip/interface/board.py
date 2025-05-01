@@ -17,6 +17,7 @@ class BoardInterface:
         self.visualizer.add_artist(self.board_artist)
         
         self.piece_artists = {}
+        self.en_passant = []
     
     def clear(self):
         for _, artist in self.piece_artists.items():
@@ -33,8 +34,12 @@ class BoardInterface:
     def get_pieces(self):
         return self.piece_artists.keys()
     
+    def get_moved(self, piece):
+        return piece.moved
+    
     def add_piece(self, code, power, square):
         piece = Piece(code, power, square)
+        piece.moved = False
         self.set_ownership(square, power)
         piece_artist = self.visualizer.make_piece_artist(piece)
         self.piece_artists[piece] = piece_artist
@@ -72,6 +77,16 @@ class BoardInterface:
     
     def move_piece_to(self, piece, square):
         piece.move_to(square)
+        piece.moved = True
         self.piece_artists[piece].move_to(square)
         self.set_ownership(square, piece.get_power())
         self.visualizer.set_stale()
+    
+    def mark_en_passant(self, piece, square):
+        self.en_passant.append((piece, square))
+    
+    def clear_en_passant(self):
+        self.en_passant.clear()
+    
+    def can_en_passant(self, piece, square):
+        return (piece, square) in self.en_passant

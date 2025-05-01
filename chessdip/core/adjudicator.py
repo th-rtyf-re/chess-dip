@@ -19,7 +19,7 @@ class Adjudicator:
         No hold orders, no convoys, no virtual orders!
         """
         self.order_interface = order_interface
-        self.orders = [order for order in self.order_interface.get_orders() if not order.get_virtual() and not isinstance(order, HoldOrder)]
+        self.orders = self.order_interface.get_adjudicable_orders()
         self.result = {order: False for order in self.orders}
         self.resolved = {order: False for order in self.orders}
         self.visited = {order: False for order in self.orders}
@@ -58,6 +58,10 @@ class Adjudicator:
         self._debug_out(f"Resolve {order} {self._debug_optimistic(optimistic)}")
         self._debug_call_depth += 1
         # print("recursion hits", self.recursion_hits)
+        
+        if isinstance(order, LinkedOrder):
+            order = order.get_linker()
+        
         if self.resolved[order]:
             self._debug_out_decr(f"1. end resolve: {self._debug_result(self.result[order])}, {self._debug_resolved(order)}")
             return self.result[order]
@@ -116,7 +120,9 @@ class Adjudicator:
     def _adjudicate(self, order, optimistic):
         self._debug_out(f"Adjudicate {order} {self._debug_optimistic(optimistic)}")
         self._debug_call_depth += 1
-        if isinstance(order, MoveOrder):
+        if isinstance(order, OrderLinker):
+            ret = self._adjudicate_linker(order, optimistic)
+        elif isinstance(order, MoveOrder):
             ret = self._adjudicate_move(order, optimistic)
         elif isinstance(order, SupportOrder):
             ret = self._adjudicate_support(order, optimistic)
@@ -160,6 +166,12 @@ class Adjudicator:
                 self.resolved[order] = False
     
     # Core adjudication functions
+    
+    def _adjudicate_linker(self, linker, optimistic):
+        for order in linker.get_orders():
+            if not self._adjudicate(order, optimistic):
+                return False
+        return True
     
     def _adjudicate_move(self, order, optimistic):
         order_at_landing = self._get_order_at_landing(order)
@@ -281,12 +293,13 @@ class Adjudicator:
         ): # head-to-head succeeds
             return 0
         else: # head-to-head fails or no head-to-head
-            return 1 + self._get_support_strength(order, optimistic)
+            return (0 if order.is_travel() else 1) + self._get_support_strength(order, optimistic)
     
     def _get_defend_strength(self, order, optimistic):
         if not order.chess_path.valid:
             return 0
-        return 1 + self._get_support_strength(order, optimistic)
+        else:
+            return (0 if order.is_travel() else 1)  + self._get_support_strength(order, optimistic)
         
     def _get_attack_strength(self, order, order_at_landing, optimistic):
         # self._debug_out(f"Getting attack strength of {order}")
@@ -294,24 +307,24 @@ class Adjudicator:
             return 0
         
         if order_at_landing is None:
-            return 1 + self._get_support_strength(order, optimistic)
+            return max(0.5, (0 if order.is_travel() else 1) + self._get_support_strength(order, optimistic))
         elif (isinstance(order_at_landing, MoveOrder)
             and order_at_landing.get_landing_square() != order.get_starting_square()
             and self._resolve(order_at_landing, optimistic)
         ): # no head-to-head, piece at landing moves
-            return 1 + self._get_support_strength(order, optimistic)
+            return max(0.5, (0 if order.is_travel() else 1) + self._get_support_strength(order, optimistic))
         elif order_at_landing.get_piece().get_power() == order.get_piece().get_power():
             # piece at landing is from the same power
             return 0
         else: # head-to-head or failed move at landing
-            attack_strength = 1
+            attack_strength = (0 if order.is_travel() else 1)
             power_at_landing = order_at_landing.get_piece().get_power()
             for support_order in self._get_real_supports(order):
                 if (support_order.get_piece().get_power() != power_at_landing
                     and self._resolve(support_order, optimistic)
                 ):
                     attack_strength += 1
-            return attack_strength
+            return max(0.5, attack_strength)
     
     # def _get_convoy_strength(self, order, optimistic):
     #     return self._get_support_strength(order, optimistic)
@@ -340,7 +353,7 @@ class Adjudicator:
         return ret
     
     def _get_move(self, square):
-        for order in self.orders:
+        for order in self.order_interface.get_orders():
             if isinstance(order, MoveOrder) and order.get_starting_square() == square:
                 return order
         return None

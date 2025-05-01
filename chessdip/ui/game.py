@@ -30,6 +30,14 @@ class OrderManager(OrderInterface):
         super().__init__(visualizer)
     
     def retract(self, order):
+        if isinstance(order, LinkedOrder):
+            orders = order.get_linker().get_orders()
+        else:
+            orders = [order]
+        for order in orders:
+            self._retract_single_order(order)
+        
+    def _retract_single_order(self, order):
         # If supported by a real order, keep but make virtual
         for support_order in order.get_supports():
             if not support_order.get_virtual():
@@ -70,12 +78,13 @@ class OrderManager(OrderInterface):
             self.remove(convoy_order)
         return
     
-    def get_order(self, order_class, args, virtual=False):
+    def get_order(self, order_class, args, virtual=False, kwargs=None):
         """
-        args is what is used to construct the order.
+        args and kwargs is what is used to construct the order.
         """
-        # order_subclass = self.order_subclasses[order_code]
         # find matching order
+        if kwargs is None:
+            kwargs = {}
         inheritable_order = None
         for other_order in self.get_orders():
             if isinstance(other_order, order_class) and args == order_class.get_args(other_order):
@@ -90,7 +99,7 @@ class OrderManager(OrderInterface):
                 inheritable_order = other_order
                 break
         if inheritable_order is not None:
-            order = order_class(*args, virtual=virtual)
+            order = order_class(*args, virtual=virtual, **kwargs)
             self.inherit_convoys(order, inheritable_order)
             if type(inheritable_order) is SupportOrder:
                 self.remove(inheritable_order)
@@ -106,7 +115,7 @@ class OrderManager(OrderInterface):
             return order
         else:
             # no match: make new order
-            order = order_class(*args, virtual=virtual)
+            order = order_class(*args, virtual=virtual, **kwargs)
             self._clear_conflicting_orders(order)
             self.add(order)
             self.add_convoys(order)
@@ -117,15 +126,20 @@ class OrderManager(OrderInterface):
             return
         conflicting_orders = []
         for other_order in self.get_orders():
-            if other_order is not order and other_order.get_piece() == order.get_piece() and not other_order.get_virtual() and not order.get_virtual():
+            if isinstance(order, LinkedOrder) and isinstance(other_order, LinkedOrder) and order.get_linker() == other_order.get_linker():
+                continue
+            elif (other_order is not order
+                and other_order.get_piece() == order.get_piece()
+                and not other_order.get_virtual()
+                and not order.get_virtual()
+            ):
                 conflicting_orders.append(other_order)
         for other_order in conflicting_orders:
             self.retract(other_order)
     
     def add_convoys(self, order):
         """
-        This is the only place where convoys are added. Note that we do not
-        check for conflicting orders.
+        Note that we do not check for conflicting orders.
         """
         for square in order.get_intermediate_squares():
             convoy_order = ConvoyOrder(None, square, order, virtual=order.virtual)
@@ -241,6 +255,7 @@ class GameManager:
             self.order_manager.add(order)
     
     def progress(self):
+        self.board.clear_en_passant()
         for order in self.order_manager.get_orders():
             if not order.get_virtual():
                 order.execute(self.board, self.console)
@@ -249,6 +264,52 @@ class GameManager:
     def process_orders(self, power, messages):
         for message in messages:
             self._process_order(power, message.lower().replace(' ', ''))
+    
+    def add_en_passant(self, power, starting_square, travel_square, attack_square):
+        pawn_piece = self.board.get_piece(starting_square)
+        if pawn_piece is None or pawn_piece.code != Piece.PAWN:
+            self.console.out(f"No pawn on {starting_square}.")
+            return False
+        passed_pawn_piece = self.board.get_piece(attack_square)
+        if passed_pawn_piece is None or passed_pawn_piece.code != Piece.PAWN:
+            self.console.out(f"No pawn on {attack_square} to attack.")
+        elif not self.board.can_en_passant(passed_pawn_piece, travel_square):
+            self.console.out(f"{passed_pawn_piece} is not open to en passant.")
+        else:
+            linker = OrderLinker()
+            self.order_manager.get_order(LinkedMoveOrder, (linker, pawn_piece, travel_square), kwargs=dict(move_type=MoveOrder.TRAVEL))
+            self.order_manager.get_order(LinkedMoveOrder, (linker, pawn_piece, attack_square), kwargs=dict(move_type=MoveOrder.ATTACK, exception="en_passant"))
+    
+    def add_castle(self, power, long=False):
+        king_square = power.get_king_square()
+        if long:
+            rook_square = power.get_queen_rook_square()
+        else:
+            rook_square = power.get_king_rook_square()
+        king_piece = self.board.get_piece(king_square)
+        rook_piece = self.board.get_piece(rook_square)
+        if king_piece is None:
+            self.console.out(f"No king on {king_square} to castle.")
+            return False
+        elif rook_piece is None:
+            self.console.out(f"No rook on {rook_square} to castle.")
+            return False
+        elif self.board.get_moved(king_piece):
+            self.console.out(f"{king_piece} already moved.")
+            return False
+        elif self.board.get_moved(rook_piece):
+            self.console.out(f"{rook_piece} already moved.")
+            return False
+        elif long: # queenside castle
+            linker = OrderLinker()
+            self.order_manager.get_order(LinkedMoveOrder, (linker, king_piece, power.get_queenside_castle_king_square()), kwargs=dict(move_type=MoveOrder.TRAVEL, exception="castle"))
+            self.order_manager.get_order(LinkedMoveOrder, (linker, rook_piece, power.get_queenside_castle_rook_square()), kwargs=dict(move_type=MoveOrder.TRAVEL, exception="castle"))
+            return True
+        else: # kingside castle
+            linker = OrderLinker()
+            self.order_manager.get_order(LinkedMoveOrder, (linker, king_piece, power.get_kingside_castle_king_square()), kwargs=dict(move_type=MoveOrder.TRAVEL, exception="castle"))
+            self.order_manager.get_order(LinkedMoveOrder, (linker, rook_piece, power.get_kingside_castle_rook_square()), kwargs=dict(move_type=MoveOrder.TRAVEL, exception="castle"))
+            return True
     
     def _process_order(self, power, message):
         """
@@ -260,6 +321,15 @@ class GameManager:
         order_class, args = self.parser.parse(message)
         if order_class is None:
             self.console.out("Could not parse order.")
+            return False
+        
+        if order_class is OrderLinker: # special linked orders
+            if args[0] == "en_passant":
+                return self.add_en_passant(power, *args[1:])
+            elif args[0] == "long_castle":
+                return self.add_castle(power, long=True)
+            elif args[0] == "short_castle":
+                return self.add_castle(power, long=False)
             return False
         
         starting_square = args[0]
@@ -278,7 +348,11 @@ class GameManager:
             return True
         elif order_class is MoveOrder:
             landing_square = args[1]
-            self.order_manager.get_order(order_class, (piece, landing_square))
+            if piece.code == Piece.PAWN and starting_square.file == landing_square.file:
+                kwargs = dict(move_type=MoveOrder.TRAVEL)
+            elif piece.code == Piece.PAWN:
+                kwargs = dict(move_type=MoveOrder.ATTACK)
+            self.order_manager.get_order(order_class, (piece, landing_square), kwargs=kwargs)
             return True
         elif order_class is SupportHoldOrder:
             supported_square = args[1]
@@ -338,6 +412,7 @@ class GameManager:
             message = self.console.input("> ").lower().replace(' ', '')
             
             if message in ["exit", "quit"]:
+                self.console.out("Exiting sandbox.")
                 return
             elif message in ["help"]:
                 self.console.out("Type \"power\" to specify your power. Type \"build\" to build. Type \"exit\" or \"quit\" to exit.")
@@ -352,7 +427,7 @@ class GameManager:
                 self.adjudicate()
             elif message == "progress":
                 self.progress()
-            elif message[:len("clear")] == "clear":
+            elif message == "clear":
                 self.clear_board()
             elif message[:len("power")] == "power":
                 power_str = message[len("power"):]
@@ -368,6 +443,8 @@ class GameManager:
                 order = self._find_order_on_square(square, virtual=False)
                 if order is not None:
                     self.order_manager.retract(order)
+            elif message == "recompute"[:len(message)]:
+                self.order_manager.recompute_paths()
             elif message[:len("save")] == "save":
                 filename = message[len("save"):]
                 if not filename:
