@@ -84,7 +84,7 @@ Pawns travel forwards but attack diagonally. When on the first two ranks of thei
 
 ### Travel and attack orders
 
-This unique behavior means that pawn orders are more complicated than for other pieces. We introduce a distinction between two types of move orders: **travel** orders and **attack** orders. Attack orders are the usual orders, and unless otherwise specified, move orders are attack orders. Travel orders have 0 attack and defend strength, but succeed against empty squares, and otherwise act like attack orders: they can be supported, bounced, etc.
+This unique behavior means that pawn orders are more complicated than for other pieces. We introduce a distinction between two types of move orders: **travel** orders and **attack** orders. Attack orders are the usual orders, and unless otherwise specified, move orders are attack orders. Travel orders have 0 attack and defend strength on their own, but succeed against empty squares, and otherwise act like attack orders: they can be supported, bounced, etc.
 
 Pawns may only be ordered to travel forwards and attack or support diagonally, except for en passant; see below. Travel orders are ordered like move orders, and with pawn orders we typically omit the piece name:
 
@@ -224,22 +224,25 @@ In all other cases, it is 1 plus the number of successful support-hold orders.
 
 ### Attack strength
 
-If the [path](#path) of the attack order fails, then the attack strength of the attack order is 0\.  
-Otherwise, if the landing square is empty, or if there is no [head-to-head battle](#head-to-head-battle) and the piece on the landing square successfully vacates the square, then the attack strength is:
-
-- 0 if the attacking piece is a pawn
-- 1 plus the number of successful support-move orders otherwise.
-
+If the [path](#path) of an *attack order* fails, then the attack strength of the attack order is 0\.  
+Otherwise, if the landing square is empty, or if there is no [head-to-head battle](#head-to-head-battle) and the piece on the landing square successfully vacates the square, then the attack strength is 1 plus the number of successful support-move orders otherwise.  
 Otherwise, if the piece on the landing square is of the same power, then the attack strength is 0\.  
 Otherwise, the attack strength is 1 plus the number of successful support-move orders from pieces that are not of the same power as the piece on the landing square.
 
-The attack strength of a travel order is ½. This is to allow traveling to an empty square.
+If the [path](#path) of a *travel order* fails, then the attack strength of the travel order is 0\.  
+Otherwise, if the landing square is empty, or if there is no [head-to-head battle](#head-to-head-battle) and the piece on the landing square successfully vacates the square, then the attack strength is:
+
+- ½ if there are no successful support-move orders (this is to allow traveling to empty squares);
+- the number of successful support-move orders otherwise.
+
+Otherwise, if the piece on the landing square is of the same power, then the attack strength is 0\.  
+Otherwise, the attack strength is the number of successful support-move orders from pieces that are not of the same power as the piece on the landing square.
 
 ### Defend strength
 
 If the [path](#path) of a move order fails, then the defend strength of the move order is 0\.  
 The defend strength of an attack order is 1 plus the number of successful support-move orders.  
-The defend strength of a travel order is 0\.
+The defend strength of a travel order is the number of successful support-move orders\.
 
 ### Prevent strength
 
