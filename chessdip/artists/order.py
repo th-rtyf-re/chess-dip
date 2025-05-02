@@ -70,12 +70,11 @@ class OrderArtist:
         if path_type is None:
             path_type = "move"
         
-        if path_type == "move":
-            ecs = ["k", self.order.piece.power.square_color[0]]
-        elif path_type == "support":
-            ecs = ["k", self.order.piece.power.square_color[0], "w"]
+        ecs = ["k", self.order.piece.power.path_color]
+        if path_type == "support":
+            ecs.append("w")
         elif path_type == "attack":
-            ecs = ["k", self.order.piece.power.square_color[0], "k"]
+            ecs.append("k")
         
         for ec, lw in zip(ecs, self.lws):
             patch = mpl.patches.PathPatch(path, ec=ec, lw=lw, **self.patch_kwargs)

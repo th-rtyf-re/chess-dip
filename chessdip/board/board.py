@@ -26,7 +26,7 @@ class Board:
         self.powers = powers
         self.pieces = []
         self.ownership = np.zeros((8, 8), dtype=int)
-        self.sc_ownership = np.zeros((8, 8), dtype=int)# -1 for white, -2 for black
+        self.sc_ownership = np.zeros((8, 8), dtype=int)
         self.sc_ownership[:2][self.sc_mask[:2]] = Side.WHITE
         self.sc_ownership[-2:][self.sc_mask[-2:]] = Side.BLACK
     
@@ -48,8 +48,16 @@ class Board:
             return True
         return False
     
-    def get_neutral_power(self):
-        return self.powers[0]
+    def get_default_owner(self, square):
+        return self.powers[Side.NEUTRAL]
+    
+    def get_default_sc_owner(self, square):
+        if square.rank < 2:
+            return self.powers[Side.WHITE]
+        elif square.rank >= 6:
+            return self.powers[Side.BLACK]
+        else:
+            return self.powers[Side.NEUTRAL]
     
     def add_piece(self, code, power, square):
         piece = Piece(code, power, square, self.visualizer)
