@@ -149,13 +149,20 @@ class PieceArtist:
         self.square = self.piece.square
         self.fc, self.highlight = self.piece.power.piece_color
         
-        self.shift = (-.08, -.02)
+        self.shift = {
+            Piece.PAWN: (-.06, -.02),
+            Piece.KNIGHT: (-.06, -.02),
+            Piece.BISHOP: (-.06, 0.),
+            Piece.ROOK: (-.04, -.0),
+            Piece.KING: (-.08, -.02)
+        }
+        
         self.path = PieceArtist.piece_path_dict[piece.code]
         
         self.affine_transform = mpl.transforms.Affine2D().translate(self.square.file, self.square.rank)
         self.scale_transform = mpl.transforms.Affine2D().scale(self.piece_radius[self.piece.code])
         self.transform = self.scale_transform + self.affine_transform
-        self.unshadow_transform = self.scale_transform + mpl.transforms.Affine2D().translate(*self.shift) + self.affine_transform
+        self.unshadow_transform = self.scale_transform + mpl.transforms.Affine2D().translate(*self.shift[self.piece.code]) + self.affine_transform
         
     
     def __str__(self):

@@ -6,15 +6,21 @@ from chessdip.board.square import Square
 
 class Side(IntEnum):
     NEUTRAL = 0
-    WHITE = -1
-    BLACK = -2
+    WHITE = 1
+    BLACK = 2
 
 class Power:
-    def __init__(self, code, name, piece_color, square_color, side, d_king=False):
+    def __init__(self, code, name, palette, side, d_king=False):
         self.code = code
         self.name = name
-        self.piece_color = piece_color# tuple: fc, highlight
-        self.square_color = square_color# tuple: dark, light
+        if side == Side.WHITE:
+            self.piece_color = (palette.white, palette.neutral)# tuple: fc, highlight
+        elif side == Side.BLACK:
+            self.piece_color = (palette.neutral, palette.black)
+        else:
+            self.piece_color = (palette.neutral, palette.neutral)
+        self.square_color = (palette.dark, palette.light)# tuple: dark, light
+        self.path_color = palette.neutral
         self.side = side# 0 for neutral, -1 for white, -2 for black
         self.d_king = d_king
     

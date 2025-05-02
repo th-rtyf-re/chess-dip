@@ -1,0 +1,1 @@
+from chessdip.artists.palette import PowerPalette

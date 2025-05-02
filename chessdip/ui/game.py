@@ -2,6 +2,7 @@
 
 import matplotlib as mpl
 from matplotlib.path import Path
+import matplotlib.pyplot as plt
 import numpy as np
 
 from chessdip.board.square import Square
@@ -9,6 +10,7 @@ from chessdip.board.power import Power, Side
 from chessdip.board.piece import Piece
 from chessdip.core.order import *
 from chessdip.core.adjudicator import Adjudicator
+from chessdip.artists.palette import PowerPalette
 from chessdip.ui.parser import Parser
 
 from chessdip.interface.board import BoardInterface
@@ -161,13 +163,21 @@ class OrderManager(OrderInterface):
 
 class GameManager:
     def __init__(self):
+        """
+        `powers` contains a certain number of default powers, corresponding to
+        neutral, white, and black.
+        
+        Getting an item in `powers` whose key is a Side should return the
+        corresponding power, e.g. `self.powers[Side.NEUTRAL]` should return the
+        neutral power.
+        """
         self.powers = [
-            Power(0, "neutral", ("none", "k"), ((175/255, 138/255, 105/255), (237/255, 218/255, 185/255)), Side.NEUTRAL),
-            Power(-2, "black", ("k", "k"), ("k", "k"), Side.BLACK),
-            Power(-1, "white", ("w", "w"), ("w", "w"), Side.WHITE),
+            Power(Side.NEUTRAL, "neutral", PowerPalette("k", (175/255, 138/255, 105/255), "none", (237/255, 218/255, 185/255), "none"), Side.NEUTRAL),
+            Power(Side.WHITE, "white", PowerPalette("w", "w", "w", "w", "w"), Side.WHITE),
+            Power(Side.BLACK, "black", PowerPalette("k", "k", "k", "k", "k"), Side.BLACK),
         ]
         
-        self._next_power_code = 1
+        self._next_power_code = len(self.powers)
         self.visualizer = VisualInterface()
         self.order_manager = OrderManager(self.visualizer)
         self.console = Console()
@@ -348,6 +358,7 @@ class GameManager:
             return True
         elif order_class is MoveOrder:
             landing_square = args[1]
+            kwargs = None
             if piece.code == Piece.PAWN and starting_square.file == landing_square.file:
                 kwargs = dict(move_type=MoveOrder.TRAVEL)
             elif piece.code == Piece.PAWN:
