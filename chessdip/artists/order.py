@@ -18,7 +18,13 @@ class OrderArtist:
         self.support_patches = {}
         self.children_artists = []
         self.patch_kwargs = dict(fc="none", joinstyle="miter", capstyle="round")
-        self.support_kwargs = dict(radius=global_kwargs["dot_radius"], fc="w", ec="k", lw=1.5 * global_kwargs["edge_width"], zorder=1.5)
+        self.support_kwargs = dict(
+            radius=global_kwargs["dot_radius"],
+            fc="w",
+            ec="k",
+            lw=1.5 * global_kwargs["edge_width"],
+            zorder=global_kwargs["support_patch_zorder"]
+        )
         lw0 = global_kwargs["path_width"] + global_kwargs["edge_width"]
         lw1 = global_kwargs["path_width"] - global_kwargs["edge_width"]
         self.lws = [lw0, lw1, lw1 / 3]

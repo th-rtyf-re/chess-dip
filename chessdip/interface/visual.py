@@ -40,7 +40,8 @@ class VisualInterface:
             path_width=4,
             edge_width=1,
             piece_radius=.3,
-            dot_radius=.1
+            dot_radius=.1,
+            support_patch_zorder=1.5
         )
     
     def set_stale(self, stale=True):
