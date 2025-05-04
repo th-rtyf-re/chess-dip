@@ -1,3 +1,5 @@
+# -*-coding:utf8-*-
+
 import colorsys
 import matplotlib.colors as mc
 
@@ -29,3 +31,8 @@ class PowerPalette:
         self.neutral = colorsys.hls_to_rgb(self.hue, neutral_lightness, neutral_saturation)
         self.dark = colorsys.hls_to_rgb(self.hue, dark_lightness, square_saturation)
         self.white = colorsys.hls_to_rgb(self.hue, white_lightness, neutral_saturation)
+
+red_palette = PowerPalette("darkred", "indianred", "firebrick", "lightsalmon", "mistyrose")
+green_palette = PowerPalette("darkgreen", "forestgreen", "xkcd:green", "lightgreen", "honeydew")
+blue_palette = PowerPalette("midnightblue", "steelblue", "royalblue", "lightskyblue", "aliceblue")
+yellow_palette = PowerPalette("saddlebrown", "darkgoldenrod", "goldenrod", "palegoldenrod", "lightyellow")
