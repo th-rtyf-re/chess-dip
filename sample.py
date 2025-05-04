@@ -1,13 +1,13 @@
 # -*-coding:utf8-*-
 
 from chessdip.test import test_cases
-from chessdip.ui import GameManager
+from chessdip.ui import GameManager, standard_setup
 
 def sandbox():
-    GM = GameManager()
-    GM.setup(variant="chess-dip")
+    GM = GameManager(setup=standard_setup)
+    GM.setup()
     GM.sandbox()
 
 if __name__ == "__main__":
-    sandbox()
-    # test_cases(sandbox=False, verbose=False)
+    # sandbox()
+    test_cases(sandbox=False, verbose=False)

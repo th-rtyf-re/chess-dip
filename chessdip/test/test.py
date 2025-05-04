@@ -1,7 +1,7 @@
 # -*-coding:utf8-*-
 
-from chessdip.ui import GameManager
-from chessdip.board import Power, Side
+from chessdip.ui import GameManager, standard_setup
+from chessdip.board.power import Power, Side
 from chessdip.artists.palette import PowerPalette
 
 """
@@ -1148,8 +1148,8 @@ def test_cases(verbose=False, sandbox=False):
         a test. Default value is False.
     """
     global GM, england, italy, france, scandinavia
-    GM = GameManager()
-    england, italy, france, scandinavia = GM.get_powers(variant="chess-dip")
+    GM = GameManager(setup=standard_setup)
+    england, italy, france, scandinavia = GM.get_powers()
     
     GM.console.out("Run DATC tests. Type \"exit\" or \"quit\" to exit.")
     GM.visualizer.ion()
