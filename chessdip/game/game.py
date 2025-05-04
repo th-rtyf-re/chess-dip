@@ -1,19 +1,27 @@
 # -*-coding:utf8-*-
 
-from chessdip.board.square import Square
 from chessdip.board.piece import Piece
-from chessdip.core.order import *
+from chessdip.board.chess_path import ChessPath
+from chessdip.core.order import (
+    HoldOrder, MoveOrder, ConvoyOrder, SupportOrder,
+    SupportHoldOrder, SupportMoveOrder, SupportConvoyOrder,
+    OrderLinker, LinkedMoveOrder,
+    BuildOrder, DisbandOrder
+)
 from chessdip.core.adjudicator import Adjudicator
 
 from chessdip.interface.board import BoardInterface
 from chessdip.interface.visual import VisualInterface
 
 from chessdip.game.parser import Parser
-from chessdip.game.game_setup import GameSetup
+from chessdip.game.board_setup import BoardSetup
 from chessdip.game.phase import Phase
 from chessdip.game.order_manager import OrderManager
 
 class Console:
+    """
+    Class for user input and output.
+    """
     def __init__(self):
         pass
     
@@ -24,27 +32,22 @@ class Console:
         return input(*args, **kwargs)
 
 class GameManager:
-    def __init__(self, setup=None):
-        """
-        `powers` contains a certain number of default powers, corresponding to
-        neutral, white, and black.
-        
-        Getting an item in `powers` whose key is a Side should return the
-        corresponding power, e.g. `self.powers[Side.NEUTRAL]` should return the
-        neutral power.
-        """
-        if setup is None:
-            self.setup = GameSetup()
+    """
+    Managing class for a game.
+    """
+    def __init__(self, board=None):
+        if board is None:
+            self.board_setup = BoardSetup()
         else:
-            self.setup = setup
+            self.board_setup = board
         
         self.visualizer = VisualInterface()
         self.order_manager = OrderManager(self.visualizer)
         self.console = Console()
-        self.board = BoardInterface(self.setup, self.visualizer)
-        self.parser = Parser(Order)
+        self.board = BoardInterface(self.board_setup, self.visualizer)
+        self.parser = Parser()
         
-        self.powers = self.setup.get_true_powers()
+        self.powers = self.board_setup.get_true_powers()
         
         self.adjudicator_verbose = False
         
@@ -62,7 +65,7 @@ class GameManager:
         self.visualizer.render()
     
     def setup(self):
-        for power, instructions in self.setup.pieces:
+        for power, instructions in self.board_setup.pieces:
             self.setup_pieces(power, instructions)
     
     def setup_pieces(self, power, instructions):
@@ -270,7 +273,7 @@ class GameManager:
                 return False
             convoyed_order_class = SupportOrder if args[3] == 's' else MoveOrder
             convoy_landing_square = args[4]
-            _, intermediate_squares = ChessPath.validate_path(convoyed_piece, convoy_starting_square, convoy_landing_square)
+            _, intermediate_squares = ChessPath.validate_path(convoyed_piece, convoy_landing_square)
             if convoy_square not in intermediate_squares:
                 self.console.out("Convoying square cannot convoy along specified path.")
                 return False

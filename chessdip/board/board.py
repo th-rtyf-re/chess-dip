@@ -2,11 +2,20 @@
 
 import numpy as np
 
-from chessdip.board.piece import Piece
 from chessdip.board.power import Side
 
 class Board:
+    """
+    The chess board. This class stores the location of supply centers and
+    the ownership of each square and supply center.
+    """
     def __init__(self, setup):
+        """
+        Parameters:
+        ----------
+        - setup: BoardSetup. Object that encodes the initial state of the
+            board.
+        """
         self.sc_mask = setup.sc_mask
         self.powers = setup.powers
         self.pieces = []
@@ -43,28 +52,3 @@ class Board:
             return self.powers[Side.BLACK]
         else:
             return self.powers[Side.NEUTRAL]
-    
-    def add_piece(self, code, power, square):
-        piece = Piece(code, power, square, self.visualizer)
-        self.pieces.append(piece)
-        self.set_ownership(square, power)
-        return piece
-    
-    def remove_piece(self, piece):
-        piece.remove()
-        self.pieces.remove(piece)
-    
-    def get_piece(self, square):
-        for piece in self.pieces:
-            if piece.square == square:
-                return piece
-        return None
-    
-    def vacate_square(self, square):
-        for piece in self.pieces:
-            if piece.square == square:
-                self.remove_piece(piece)
-    
-    def move_piece_to(self, piece, square):
-        piece.move_to(square)
-        self.set_ownership(square, piece.power)

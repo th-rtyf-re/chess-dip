@@ -5,10 +5,23 @@ import matplotlib.pyplot as plt
 
 from chessdip.artists.piece import PieceArtist
 from chessdip.artists.board import BoardArtist
-from chessdip.core.order import *
-from chessdip.artists.order import *
+from chessdip.core.order import (
+    HoldOrder, MoveOrder, ConvoyOrder, SupportOrder,
+    SupportHoldOrder, SupportMoveOrder, SupportConvoyOrder,
+    BuildOrder, DisbandOrder
+)
+from chessdip.artists.order import (
+    OrderArtist,
+    HoldOrderArtist, MoveOrderArtist, ConvoyOrderArtist, SupportOrderArtist,
+    SupportHoldOrderArtist, SupportMoveOrderArtist, SupportConvoyOrderArtist,
+    BuildOrderArtist, DisbandOrderArtist
+)
 
 class LineDataUnits(mpl.lines.Line2D):
+    """
+    Class like Line2D except that the line width is specified in data units.
+    Adapted from https://stackoverflow.com/a/42972469/17357015.
+    """
     def __init__(self, *args, **kwargs):
         _lw_data = kwargs.pop("linewidth", 1) 
         super().__init__(*args, **kwargs)
@@ -29,7 +42,8 @@ class LineDataUnits(mpl.lines.Line2D):
 
 class VisualInterface:
     """
-    The figure/axes of the game instance. Also makes artists.
+    The figure/axes of the game instance. This class also creates the
+    artists associated to various game objects.
     """
     def __init__(self):
         mpl.rcParams['toolbar'] = 'None'

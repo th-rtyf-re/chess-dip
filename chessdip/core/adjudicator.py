@@ -2,7 +2,9 @@
 
 from enum import Enum
 
-from chessdip.core.order import *
+from chessdip.core.order import (
+    HoldOrder, MoveOrder, ConvoyOrder, SupportOrder, OrderLinker, LinkedOrder
+)
 
 class State(Enum):
     UNRESOLVED = 0
@@ -11,8 +13,18 @@ class State(Enum):
 
 class Adjudicator:
     """
-    Shoutouts to Lucas Kruijswijk (https://diplom.org/Zine/S2009M/Kruijswijk/DipMath_Chp6.htm)
-    and Talia Parkinson (pydip) and DATC (https://webdiplomacy.net/doc/DATC_v3_0.html#5.E).
+    Class implementing the partial information algorithm of the Diplomacy
+    Adjudicator Test Cases (DATC) v3.0 by Lucas B. Kruijswijk, Section 5.E:
+        https://webdiplomacy.net/doc/DATC_v3_0.html#5.E
+    
+    Other sources of inspiration were:
+    - The Math of Adjudication by Lucas B. Kruijwijk:
+        https://diplom.org/Zine/S2009M/Kruijswijk/DipMath_Chp6.htm
+    - the `pydip` package by Talia Parkinson:
+        https://github.com/taparkins/pydip/
+    
+    If `verbose` is True, then the adjudicator reports each call to the
+    `_resolve` and `_adjudicate` functions, and reports the output.
     """
     def __init__(self, order_interface, verbose=False):
         self.order_interface = order_interface
@@ -27,25 +39,15 @@ class Adjudicator:
         self.verbose = verbose
         self._debug_call_depth = 0
     
-    def _debug_out(self, message):
-        if self.verbose:
-            print("│ " * self._debug_call_depth + message)
-    
-    def _debug_out_decr(self, message):
-        if self.verbose:
-            self._debug_call_depth -= 1
-            print("│ " * self._debug_call_depth + "└ " + message)
-    
-    def _debug_optimistic(self, optimistic):
-        return "optimistic" if optimistic else "pessimistic"
-    
-    def _debug_result(self, result):
-        return "succeed" if result else "fail"
-    
-    def _debug_resolved(self, order):
-        return "resolved" if self.resolved[order] else "unresolved"
+    # ==== Main adjudication functions ====
     
     def adjudicate(self):
+        """
+        Adjudicate the current order set. This function assumes that hold
+        orders were properly added: that is, every piece that does not have
+        a move order, has a hold order, even if that piece was not ordered
+        to hold.
+        """
         for order in self.orders:
             result = self._resolve(order, True)
             self.order_interface.set_success(order, result)
@@ -55,9 +57,18 @@ class Adjudicator:
                 self.order_interface.set_success(order, False)
     
     def _resolve(self, order, optimistic):
+        """
+        Implementation of the final partial information algorithm as described
+        in Section 5.E of the DATC v3.0.
+        
+        There is one modification: checking that `recursion_hits` is equal
+        to `old_recursion_hits` only happens if the order is in `cycle`. I
+        think that this is needed to address orders belonging to multiple
+        cycles, but I have not checked it. The algorithm seems to work,
+        according to the DATC tests.
+        """
         self._debug_out(f"Resolve {order} {self._debug_optimistic(optimistic)}")
         self._debug_call_depth += 1
-        # print("recursion hits", self.recursion_hits)
         
         if isinstance(order, LinkedOrder):
             order = order.get_linker()
@@ -115,8 +126,6 @@ class Adjudicator:
         self._debug_out_decr(f"6. end resolve: not ancestor of cycle, {self._debug_result(optimistic)}, {self._debug_resolved(order)}")
         return optimistic
     
-    # Main adjudication functions
-    
     def _adjudicate(self, order, optimistic):
         self._debug_out(f"Adjudicate {order} {self._debug_optimistic(optimistic)}")
         self._debug_call_depth += 1
@@ -165,7 +174,7 @@ class Adjudicator:
             else:
                 self.resolved[order] = False
     
-    # Core adjudication functions
+    # ==== Core adjudication functions ====
     
     def _adjudicate_linker(self, linker, optimistic):
         for order in linker.get_orders():
@@ -264,7 +273,7 @@ class Adjudicator:
                 return False
         return True
     
-    # Strength computations
+    # ==== Strength computations ====
     
     def _get_hold_strength(self, square, optimistic):
         # self._debug_out(f"Getting hold strength at {square}")
@@ -326,9 +335,6 @@ class Adjudicator:
                     attack_strength += 1
             return max(0.5, attack_strength)
     
-    # def _get_convoy_strength(self, order, optimistic):
-    #     return self._get_support_strength(order, optimistic)
-    
     def _get_support_strength(self, order, optimistic):
         support = 0
         for support_order in self._get_real_supports(order):
@@ -336,7 +342,7 @@ class Adjudicator:
                 support += 1
         return support
     
-    # Order retrieval
+    # ==== Order retrieval ====
     
     def _get_other_opposing(self, order):
         """
@@ -358,9 +364,13 @@ class Adjudicator:
                 return order
         return None
     
-    def _get_hold(self, square): # even a virtual hold
+    def _get_hold(self, square):
+        """
+        Get real hold order on `square`, if it exists. Note that all
+        non-moving pieces get a real hold order.
+        """
         for order in self.order_interface.get_orders():
-            if not order.get_virtual() and isinstance(order, HoldOrder) and order.get_starting_square() == square:
+            if isinstance(order, HoldOrder) and order.get_starting_square() == square:
                 return order
         return None
     
@@ -372,7 +382,8 @@ class Adjudicator:
     
     def _get_order_at_landing(self, order):
         """
-        no convoys
+        Get order at the landing square. This is used when adjudicating move
+        orders. In particular, we ignore convoy orders.
         """
         for other_order in self.order_interface.get_orders():
             if not isinstance(other_order, ConvoyOrder) and other_order.get_starting_square() == order.get_landing_square():
@@ -381,3 +392,23 @@ class Adjudicator:
     
     def _get_real_supports(self, order):
         return [support_order for support_order in order.get_supports() if not support_order.get_virtual()]
+    
+    # ==== Debug messages ====
+    
+    def _debug_out(self, message):
+        if self.verbose:
+            print("│ " * self._debug_call_depth + message)
+    
+    def _debug_out_decr(self, message):
+        if self.verbose:
+            self._debug_call_depth -= 1
+            print("│ " * self._debug_call_depth + "└ " + message)
+    
+    def _debug_optimistic(self, optimistic):
+        return "optimistic" if optimistic else "pessimistic"
+    
+    def _debug_result(self, result):
+        return "succeed" if result else "fail"
+    
+    def _debug_resolved(self, order):
+        return "resolved" if self.resolved[order] else "unresolved"

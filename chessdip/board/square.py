@@ -3,6 +3,7 @@
 from collections import namedtuple
 
 class Square(namedtuple("Square", ["file", "rank"])):
+    """Squares on the chess board."""
     __slots__ = ()
     
     def __str__(self):

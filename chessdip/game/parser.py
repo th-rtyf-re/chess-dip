@@ -4,12 +4,18 @@ import re
 
 from chessdip.board.square import Square
 from chessdip.board.piece import Piece
-from chessdip.core.order import *
+from chessdip.core.order import (
+    HoldOrder, MoveOrder, ConvoyOrder, SupportOrder,
+    SupportHoldOrder, SupportMoveOrder, SupportConvoyOrder,
+    OrderLinker, LinkedMoveOrder,
+    BuildOrder, DisbandOrder
+)
 
 class Parser:
-    def __init__(self, order_class):
-        self.order_class = order_class
-        
+    """
+    Class that parses orders via regular expression pattern matching.
+    """
+    def __init__(self):
         self.piece_dict = {
             'P': Piece.PAWN,
             'N': Piece.KNIGHT,
@@ -99,6 +105,9 @@ class Parser:
             return None, tuple()
     
     def square(self, square_str):
+        """
+        Return the Square corresponding to `square_str`, with validation.
+        """
         if len(square_str) < 2:
             return None
         if square_str[0] not in "abcdefgh" or square_str[1] not in "12345678":
@@ -107,23 +116,9 @@ class Parser:
     
 def _square(square_str):
     """
-    Assume that `square_str` is a valid input.
+    Return the Square corresponding to `square_str`. We assume that
+    `square_str` is a valid square.
     """
     file = ord(square_str[0]) - ord('a')
     rank = int(square_str[1]) - 1
     return Square(file=file, rank=rank)
-
-def test():
-    from order import Order
-    
-    p = Parser(Order)
-    print(p.pattern)
-    while True:
-        message = input("> ").lower().replace(" ", "")
-        if message == "quit":
-            return
-        else:
-            p.parse(message)
-
-if __name__ == "__main__":
-    test()

@@ -3,9 +3,20 @@
 import numpy as np
 
 from chessdip.board.power import Power, Side
-from chessdip.artists.palette import PowerPalette, red_palette, green_palette, blue_palette, yellow_palette
+from chessdip.artists.palette import (
+    PowerPalette, red_palette, green_palette, blue_palette, yellow_palette
+)
 
-class GameSetup:
+class BoardSetup:
+    """
+    Class describing an initial board setup, including the list of powers,
+    the placement of supply centers, and initial pieces.
+    
+    In particular, the list `powers` has three default powers, used to
+    indicate neutral or shared ownership of squares and supply centers:
+    neutral, white, and black. The positions of these powers in `powers`
+    also corresponds to the int values of the corresponding Side names.
+    """
     def __init__(self, powers=None, sc_mask=None, pieces=None):
         self.powers = [
             Power("neutral", PowerPalette("k", (175/255, 138/255, 105/255), "none", (237/255, 218/255, 185/255), "none"), Side.NEUTRAL),
@@ -36,8 +47,11 @@ class GameSetup:
     
     def get_true_powers(self):
         return self.powers[3:]
-    
-standard_setup = GameSetup()
+
+"""
+The only setup defined so far, with four powers and 29 supply centers.
+"""
+standard_setup = BoardSetup()
 england = Power("England", red_palette, Side.WHITE, d_king=True)
 italy = Power("Italy", green_palette, Side.WHITE)
 france = Power("France", blue_palette, Side.BLACK)

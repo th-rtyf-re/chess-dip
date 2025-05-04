@@ -229,11 +229,27 @@ def _get_intersection(vec, v0, v1):
         return None
 
 class ChessPathArtist:
+    """
+    Artist that compute the visual path of an order. The general design is
+    that valid moves follow vertical, horizontal, and diagonal directions,
+    while invalid moves are a simple straight line from the starting square
+    to the landing square.
+    """
     def __init__(self, chess_path, junction=None, shrinkA=0, shrinkB=0, clockwise=True):
         """
-        `junction` is the location of the supported order's intersection with
-        the landing square.
-        clockwise: choose clockwise path over counter-clockwise when ambiguity
+        Parameters:
+        ----------
+        - chess_path: ChessPath. The path to be drawn.
+        - junction: 2D point, optional. The junction is where a support path
+            is aimed towards. This will usually be the intersection of the
+            supported path and the landing square's boundary. Default value
+            is None
+        - shrinkA, shrinkB: float, optional. These parameters shorten the
+            path at its start and end, respectively. Default value for both
+            is 0.
+        - clockwise: bool, optional. When True, the artist will choose the
+            clockwise path over the counter-clockwise one when both paths
+            are available. Default value is True.
         """
         self.chess_path = chess_path
         self.junction = junction
@@ -259,10 +275,6 @@ class ChessPathArtist:
         return path
     
     def compute_vertices(self):
-        """
-        `junction` is the location of the supported order's intersection with
-        the landing square.
-        """
         x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
         vertices = [(x0, y0)]
         for square in self.chess_path.intermediate_squares:
@@ -300,15 +312,24 @@ class ChessPathArtist:
         Find closest corner of current square to the target point.
         Disambiguate using the object's clockwise flag.
         
-        We assume that the target square lies outside of the current square.
+        We assume that the target square lies outside of the current square,
+        or on the boundary.
         
-        L1 and L2 distances are equivalent in this situtation.
+        Parameters:
+        ----------
+        - square_center: 2D point. Center of the current square.
+        - target: 2D point. Target point.
+        - clockwise: bool or None, optional. If True, then select the first
+            corner that comes when proceeding clockwise. If False, then do
+            the opposite. If None, then use the artist's `clockwise`
+            parameter. Default value is None.
         """
         if clockwise is None:
             clockwise = self.clockwise
         x0, y0 = square_center
         target = np.asarray(target)
         corners = np.array([(x0 - .5, y0 - .5), (x0 - .5, y0 + .5), (x0 + .5, y0 + .5), (x0 + .5, y0 - .5)])
+        # L1 and L2 distances are equivalent in this situtation, so we use L1.
         dists = np.sum(np.abs(np.subtract(target, corners)), axis=1)
         candidate_idx = (dists == dists.min()).nonzero()[0]
         if len(candidate_idx) == 1:
@@ -321,8 +342,11 @@ class ChessPathArtist:
     
     def _connecting_vertices(self, start, end):
         """
-        Assuming start is on a square corner (integer + .5 coordinates)
-        and end is on a square edge (half-int coords)
+        Find the vertices of a path that connect the start point to the end
+        point, where the path can only go vertically and horizontally. We
+        assume that the start is on a square corner
+        (integer + .5 coordinates) and that the end is on a square edge
+        (half-int coords).
         """
         ax, ay = start
         bx, by = end
@@ -353,7 +377,7 @@ class ChessPathArtist:
     
     def _shrink_line(self, start, end, shrink):
         """
-        Shrink the point end towards start
+        Shrink the point end towards start.
         """
         v_prev = np.asarray(start)
         v_next = np.asarray(end)
@@ -364,6 +388,9 @@ class ChessPathArtist:
         return tuple(v_next - shrink * direction)
     
     def compute_vectors(self, anchors):
+        """
+        Experimental; like `compute_vertices` but with Vectors.
+        """
         x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
         if not self.chess_path.valid:
             if self.junction is None:
@@ -483,8 +510,7 @@ class ChessPathArtist:
     
     def _connecting_vectors(self, start, end):
         """
-        Assuming start is on a square corner (integer + .5 coordinates)
-        and end is on a square edge (half-int coords)
+        Experimental; like `_connecting_vertices` but with Vectors.
         """
         ax, ay = start
         bx, by = end

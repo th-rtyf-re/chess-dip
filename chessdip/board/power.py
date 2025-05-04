@@ -5,11 +5,25 @@ from enum import IntEnum
 from chessdip.board.square import Square
 
 class Side(IntEnum):
+    """
+    Sides of the chess board. The NEUTRAL side loosely corresponds to the
+    middle of the board.
+    
+    The int values of the names correspond to the index of the corresponding
+    default power in the BoardSetup.
+    """
     NEUTRAL = 0
     WHITE = 1
     BLACK = 2
 
 class Power:
+    """
+    Parameters for a game power, including name, color scheme (called palette),
+    side of the board, and side of the king (on the `e` file, as in standard
+    chess, or the `d` file).
+    
+    Powers have methods for obtaining special squares.
+    """
     def __init__(self, name, palette, side, d_king=False):
         self.name = name
         if side == Side.WHITE:

@@ -5,22 +5,38 @@ from chessdip.board.square import Square
 from chessdip.board.piece import Piece
 
 class ChessPath:
+    """
+    Class managing the path of a piece. Different pieces move differently;
+    this class validates paths accordingly and handles exceptions as well.
+    
+    There is one class method, `validate_path`, which validates the path of
+    a given piece.
+    """
     def __init__(self, piece, landing_square, exception=None):
         """
-        For exceptions, we assume that the path is already validated.
+        Validate a piece's move and compute the intermediate squares.
+        
+        Parameters:
+        ----------
+        - piece: Piece.
+        - landing_square: Square.
+        - exception: str or None. Available arguments are "castle" and
+            "en_passant". If `exception` is not None, then we assume that
+            the path is already valid, and we only need to compute the
+            intermediate squares.
         """
         self.piece = piece
         self.start = self.piece.square
         self.land = landing_square
         
         if exception is None:
-            self.valid, self.intermediate_squares = ChessPath.validate_path(self.piece, self.start, self.land)
+            self.valid, self.intermediate_squares = ChessPath.validate_path(self.piece, self.land)
         elif exception == "castle":
             self.valid = True
             if self.piece.code == Piece.KING:
                 self.intermediate_squares = []
             elif self.piece.code == Piece.ROOK:
-                _, squares = ChessPath.validate_path(self.piece, self.start, self.land)
+                _, squares = ChessPath.validate_path(self.piece, self.land)
                 self.intermediate_squares = squares[:-1]
         elif exception == "en_passant":
             dfile = self.land.file - self.start.file
@@ -34,7 +50,17 @@ class ChessPath:
     def __str__(self):
         return f"Chess path for {self.piece} to {self.land}"
     
-    def validate_path(piece, start, land):
+    def validate_path(piece, land):
+        """
+        Validate the `piece`'s move to the `land` square and compute the
+        intermediate squares.
+        
+        Returns:
+        -------
+        - valid: bool.
+        - intermediate_squares: list of Squares.
+        """
+        start = piece.get_square()
         if start == land:
             return False, []
         valid = False

@@ -4,6 +4,19 @@ import colorsys
 import matplotlib.colors as mc
 
 class PowerPalette:
+    """
+    Manager for the colors associated to a power. The colors and their uses
+    are:
+    - black: shadow color for pieces when the power is on the black side of
+        the board,
+    - dark: color of owned dark squares,
+    - neutral: main color of pieces when the power is on the black side of
+        the board, and shadow color of pieces when the power is on the
+        white side of the board,
+    - light: color of owned light squares,
+    - white: main color of pieces when the power is on the white side of
+        the board.
+    """
     def __init__(self, black, dark, neutral, light, white):
         self.black = black
         self.dark = dark
@@ -13,7 +26,12 @@ class PowerPalette:
     
     def generate_colors(self, base_color):
         """
-        base_color is a matplotlib color
+        Generate a palette based on a color. This does not give great
+        results.
+        
+        Parameters:
+        ----------
+        - base_color. Any acceptable Matplotlib color.
         """
         self.hue = colorsys.rgb_to_hls(*mc.to_rgb(base_color))[0]
         

@@ -9,7 +9,17 @@ from chessdip.artists.piece import PieceArtist
 from chessdip.artists.chess_path import ChessPathArtist, ChessPathVector
 
 class OrderArtist:
+    """
+    Base class for all order artists. Order artists also manage the
+    connections with supporting orders.
+    """
     def __init__(self, order, global_kwargs):
+        """
+        Parameters:
+        ----------
+        - order: Order.
+        - global_kwargs: dict. Keyword arguments for various lengths.
+        """
         self.order = order
         self.virtual = False
         self.ax = None
@@ -86,12 +96,10 @@ class OrderArtist:
             patch = mpl.patches.PathPatch(path, ec=ec, lw=lw, **self.patch_kwargs)
             self.patches.append(patch)
     
-    # def update_path(self, path):
-    #     for patch in self.patches:
-    #         patch.set_path(path)
-    #     # do something for support patches as well...
-    
     def update_vertices(self, vertices):
+        """
+        Experimental; called when redrawing paths.
+        """
         path = Path(vertices, [Path.MOVETO] + [Path.LINETO] * (len(vertices) - 1))
         for patch in self.patches:
             patch.set_path(path)
@@ -212,6 +220,9 @@ class ConvoyOrderArtist(OrderArtist):
         pass
 
 class SupportOrderArtist(OrderArtist):
+    """
+    Parent class for all support order artists.
+    """
     def __init__(self, order, supported_artist, global_kwargs):
         super().__init__(order, global_kwargs)
         self.supported_artist = supported_artist

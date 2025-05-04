@@ -1,10 +1,17 @@
 # -*-coding:utf8-*-
 
-from chessdip.core.order import *
+from chessdip.core.order import (
+    ConvoyOrder, SupportOrder, SupportConvoyOrder, LinkedOrder
+)
 
 from chessdip.interface.order import OrderInterface
 
 class OrderManager(OrderInterface):
+    """
+    Managing class for an order set. In addition to being an OrderInterface,
+    objects of this class can properly add and remove orders so that other
+    orders remain valid.
+    """
     def __init__(self, visualizer):
         super().__init__(visualizer)
     
@@ -59,11 +66,23 @@ class OrderManager(OrderInterface):
     
     def get_order(self, order_class, args, virtual=False, kwargs=None):
         """
-        args and kwargs is what is used to construct the order.
+        Find or create the order of class `order_class` using the arguments
+        `args` and keyword arguments `kwargs`. In addition to finding the
+        exact order, we can also find an inheritable order: an order whose
+        properties can be transfered to a new order of a similar type, e.g.
+        a SupportOrder that becomes a subclass.
+        
+        Parameters:
+        ----------
+        - order_class: a subclass of Order.
+        - args: tuple.
+        - virtual: bool, optional. Default value is False
+        - kwargs: dict or None, optional. If None, then no keyword arguments
+            are passed on to the object creation. Default value is None.
         """
-        # find matching order
         if kwargs is None:
             kwargs = {}
+        # find matching order
         inheritable_order = None
         for other_order in self.get_orders():
             if isinstance(other_order, order_class) and args == order_class.get_args(other_order):
@@ -125,8 +144,8 @@ class OrderManager(OrderInterface):
             self.add(convoy_order)
             self.add_convoy(order, convoy_order)
     
-    def get_support_order(self, order_class, piece, supported_order_code, supported_order_args, virtual=False):
-        supported_order = self.get_order(supported_order_code, supported_order_args, virtual=True)
+    def get_support_order(self, order_class, piece, supported_order_class, supported_order_args, virtual=False):
+        supported_order = self.get_order(supported_order_class, supported_order_args, virtual=True)
         order = self.get_order(order_class, (piece, supported_order), virtual=virtual)
         self.add_support(supported_order, order)
         return order

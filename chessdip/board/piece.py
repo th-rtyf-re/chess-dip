@@ -1,6 +1,10 @@
 # -*-coding:utf8-*-
 
 class Piece:
+    """
+    Playable pieces. Piece types are identified by integers. The available
+    pieces are pawns (0), knights (1), bishops (2), rooks (3), and kings (4).
+    """
     PAWN = 0
     KNIGHT = 1
     BISHOP = 2

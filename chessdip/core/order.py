@@ -4,6 +4,12 @@ from chessdip.board.chess_path import ChessPath
 from chessdip.board.piece import Piece
 
 class Order:
+    """
+    Base class for orders. Orders can be real or virtual, as indicated by
+    the optional argument `virtual`. Virtual orders are orders that have not
+    been ordered themselves, but that are supported or convoyed by other
+    orders.
+    """
     def __init__(self, piece, *other_args, virtual=False):
         self.piece = piece
         self.other_args = other_args
@@ -20,6 +26,10 @@ class Order:
         pass
     
     def short_str(self):
+        """
+        String representation called by convoys. This is separate from the
+        usual `__str__` method to prevent infinite recursion.
+        """
         return self.__str__()
     
     def get_piece(self):
@@ -62,15 +72,35 @@ class Order:
         self.convoyed_order = order
     
     def get_args(self):
+        """
+        Get arguments used to initialize the order.
+        """
         return (self.piece,) + self.other_args
     
     def get_intermediate_squares(self):
         return []
     
     def is_inheritable(self, *args):
+        """
+        Check if the order can be inherited by another order with the
+        arguments `args`.
+        """
         return False
     
     def execute(self, board, console):
+        """
+        Execute the order.
+        
+        Parameters:
+        ----------
+        - board: BoardInterface. Interface that manages the board and the
+            pieces.
+        - console: Console. Place where messages are sent.
+        
+        Returns:
+        -------
+        - bool. True if the order succeeds, and False if not.
+        """
         return False
     
     def set_success(self, success):
@@ -78,9 +108,6 @@ class Order:
     
     def get_success(self):
         return self.success
-    
-    def evaluate(self):
-        pass
     
 class HoldOrder(Order):
     def __init__(self, piece, virtual=False):
@@ -108,13 +135,28 @@ class HoldOrder(Order):
         return True
 
 class MoveOrder(Order):
+    """
+    Class for all move orders. The distinction between attack and travel
+    orders is handled by the attribute `move_type`, which takes one of three
+    values: MOVE (0), corresponding to a move that is both an attack and a
+    travel, ATTACK (1), and TRAVEL (2).
+    """
     MOVE = 0
     ATTACK = 1
     TRAVEL = 2
     
     def __init__(self, piece, landing_square, virtual=False, move_type=MOVE, exception=None):
         """
-        move_type is ATTACK or TRAVEL when it is only one of these types.
+        Parameters:
+        ----------
+        - piece: Piece.
+        - landing_square: Square.
+        - virtual: bool, optional. Default value is False.
+        - move_type: int, optional. Default value is 0, corresponding to a
+            regular move.
+        - exception: str, optional. This argument indicates an exceptional
+            move, such as a castle or en passant move. This argument is
+            passed on to the ChessPath. Default value is None.
         """
         super().__init__(piece, landing_square, virtual=virtual)
         
@@ -142,13 +184,14 @@ class MoveOrder(Order):
         return self.move_type == MoveOrder.TRAVEL
     
     def execute(self, board, console):
+        verb = ["move", "attack", "travel"][self.move_type]
         if self.virtual:
             return False
         elif not self.success:
-            console.out(f"{self.piece} failed to move.")
+            console.out(f"{self.piece} failed to {verb}.")
             return False
         elif not self.chess_path.valid:
-            console.out(f"{self.piece} cannot move to {self.landing_square}.")
+            console.out(f"{self.piece} cannot {verb} to {self.landing_square}.")
             return False
         # Successful move
         if self.piece.code == Piece.PAWN and self.is_attack() and board.get_piece(self.landing_square) is None:
@@ -166,7 +209,13 @@ class MoveOrder(Order):
 class ConvoyOrder(Order):
     def __init__(self, piece, square, convoyed_order, virtual=False):
         """
-        piece should be None
+        Parameters:
+        ----------
+        - piece: None. This argument is just here for consistency with the
+            parent class.
+        - square: Square.
+        - convoyed_order: Order. A move or support order.
+        - virtual: bool, optional. Default value is False.
         """
         super().__init__(piece, square, convoyed_order, virtual=virtual)
         
@@ -196,6 +245,9 @@ class ConvoyOrder(Order):
         return False
 
 class SupportOrder(Order):
+    """
+    Parent class for all support orders.
+    """
     def __init__(self, piece, supported_square, virtual=False):
         super().__init__(piece, supported_square, virtual=virtual)
         
@@ -333,6 +385,13 @@ class SupportConvoyOrder(SupportOrder):
         return True
 
 class OrderLinker:
+    """
+    Class managing a set of linked orders, that is, orders whose success
+    depends on the success of the others.
+    
+    This class shares the get/set success methods of `Order`, making it
+    equivalent in the view of the adjudicator.
+    """
     def __init__(self, orders=None):
         if orders is None:
             orders = []
@@ -363,6 +422,9 @@ class OrderLinker:
         self.success = success
 
 class LinkedOrder:
+    """
+    Base class for linked orders.
+    """
     def __init__(self, linker):
         self.linker = linker
         self.linker.add_order(self)
@@ -375,6 +437,9 @@ class LinkedOrder:
             super(LinkedOrder, order).set_virtual(virtual)
 
 class LinkedMoveOrder(LinkedOrder, MoveOrder):
+    """
+    Class for linked move orders.
+    """
     def __init__(self, linker, piece, landing_square, virtual=False, move_type=MoveOrder.MOVE, exception=None):
         MoveOrder.__init__(self, piece, landing_square, virtual=virtual, move_type=move_type, exception=exception)
         LinkedOrder.__init__(self, linker)
@@ -382,20 +447,6 @@ class LinkedMoveOrder(LinkedOrder, MoveOrder):
     def __str__(self):
         prefix = "[virtual] " if self.virtual else ""
         return prefix + f"{self.piece} linked move to {self.landing_square}"
-    
-    def execute(self, board, console):
-        if self.virtual:
-            return False
-        elif not self.success:
-            console.out(f"{self.piece} failed to move.")
-            return False
-        elif not self.chess_path.valid:
-            console.out(f"{self.piece} cannot move to {self.landing_square}.")
-            return False
-        board.move_piece_to(self.piece, self.landing_square)
-        board.set_ownership(self.landing_square, self.piece.power)
-        console.out(f"{self.piece} moved to {self.landing_square}.")
-        return True
 
 class BuildOrder(Order):
     def __init__(self, power, piece_code, square, virtual=False):

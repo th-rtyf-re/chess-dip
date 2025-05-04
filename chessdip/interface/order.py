@@ -1,11 +1,16 @@
 # -*-coding:utf8-*-
 
-from chessdip.core.order import *
-from chessdip.artists.chess_path import *
+from chessdip.core.order import (
+    HoldOrder, MoveOrder, ConvoyOrder, SupportOrder,
+    SupportHoldOrder, SupportMoveOrder, SupportConvoyOrder,
+    OrderLinker, LinkedOrder,
+    BuildOrder, DisbandOrder
+)
+from chessdip.artists.chess_path import ChessPathArtist, ChessPathArtistManager
 
 class OrderInterface:
     """
-    Managing orders and their artists
+    Managing class for orders and their artists.
     """
     def __init__(self, visualizer):
         self.visualizer = visualizer
@@ -28,6 +33,9 @@ class OrderInterface:
         return orders
     
     def clear(self):
+        """
+        Remove all orders and their artists.
+        """
         for _, artist in self.artists.items():
             artist.remove()
         self.artists.clear()
@@ -74,6 +82,9 @@ class OrderInterface:
         order.remove_convoy(convoy_order)
     
     def inherit_convoys(self, order, other_order):
+        """
+        Move the convoys of `other_order` to `order`.
+        """
         convoys = other_order.get_convoys()
         order.set_convoys(convoys)
         for convoy_order in convoys:
@@ -87,6 +98,7 @@ class OrderInterface:
             orders = [order]
         for order in orders:
             self._set_success_single_order(order, success)
+        self.visualizer.set_stale()
     
     def _set_success_single_order(self, order, success):
         order.set_success(success)
@@ -96,9 +108,11 @@ class OrderInterface:
             self.artists[supported_order].set_support_success(self.artists[order], success)
         for convoy_order in order.get_convoys():
             self.set_success(convoy_order, success)
-        self.visualizer.set_stale()
     
     def recompute_paths(self):
+        """
+        Experimental; recompute paths using non-overlapping vectors.
+        """
         import warnings
         warnings.warn("Recomputing paths is an experimental feature that will probably change in the future.")
         

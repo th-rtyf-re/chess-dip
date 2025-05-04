@@ -7,6 +7,10 @@ import numpy as np
 from chessdip.board.piece import Piece
 
 class PiecePath:
+    """
+    Namespace for the paths that define piece sprites. All piece sprites
+    are drawn using Matplotlib PathPatches.
+    """
     def pawn_path():
         path = Path.circle(radius=1) # Approximate circle
         return path
@@ -67,21 +71,25 @@ class PiecePath:
 
     def _get_miter_angle(x, y, alpha):
         """
-        The miter angle is specified as follows:
+        Consider the unit circle centered at the origin, O. Consider a ray
+        starting at (x, y) with angle alpha relative to the x-axis. This ray
+        intersect the circle at a point P. Then the miter angle, beta, is
+        the angle at O between the x-axis and the point P:
         
+                     P
                     ,|
                   ., |
                 . ,  |
            ___.__,a__'
           | .    |   |
           |b_____|   | y
-        
+          O
           <------>
              x
         
-        The comma and dot lines form angles a and b, respectively, with the
-        horizontal axis. The angles are separated by a vector (x, y). The
-        dot line is of length 1. Given a, compute b. We use the fact that
+        The comma and dot lines form angles a(lpha) and b(eta), respectively,
+        with the x-axis. The angles are separated by a vector (x, y). The
+        dot line is of length 1. To compute b, we use the fact that
         
             tan(a) = (sin(b) - y) / (cos(b) - x)
         """
@@ -124,6 +132,14 @@ class PiecePath:
         return path
 
 class PieceArtist:
+    """
+    Artist for pieces. This class has one class attribute, `piece_path_dict`,
+    which to each piece code associates the sprite path as described by
+    PiecePath.
+    
+    Pieces are drawn with three patches: a main patch with a face color, an
+    edge path that draws a black edge for the piece, and a shadow patch.
+    """
     piece_path_dict = {
         Piece.PAWN: PiecePath.pawn_path(),
         Piece.KNIGHT: PiecePath.knight_path(),
@@ -133,6 +149,12 @@ class PieceArtist:
     }
     
     def __init__(self, piece, global_kwargs):
+        """
+        Parameters:
+        ----------
+        - piece: Piece.
+        - global_kwargs: dict. Keyword arguments for various lengths.
+        """
         self.piece = piece
         self.ax = None
     
@@ -162,7 +184,7 @@ class PieceArtist:
         self.affine_transform = mpl.transforms.Affine2D().translate(self.square.file, self.square.rank)
         self.scale_transform = mpl.transforms.Affine2D().scale(self.piece_radius[self.piece.code])
         self.transform = self.scale_transform + self.affine_transform
-        self.unshadow_transform = self.scale_transform + mpl.transforms.Affine2D().translate(*self.shift[self.piece.code]) + self.affine_transform
+        self.shadow_transform = self.scale_transform + mpl.transforms.Affine2D().translate(*self.shift[self.piece.code]) + self.affine_transform
         
     
     def __str__(self):
@@ -171,11 +193,11 @@ class PieceArtist:
     def _make_patches(self, zorder=1.):
         piece_patch = mpl.patches.PathPatch(self.path, fc=self.highlight, ec="none", transform=self.transform + self.ax.transData, **self.kwargs, zorder=zorder)
         
-        unshadow_patch = mpl.patches.PathPatch(self.path, fc=self.fc, ec=self.highlight, transform=self.unshadow_transform + self.ax.transData, **self.kwargs, zorder=zorder)
-        unshadow_patch.set_clip_path(piece_patch)
+        shadow_patch = mpl.patches.PathPatch(self.path, fc=self.fc, ec=self.highlight, transform=self.shadow_transform + self.ax.transData, **self.kwargs, zorder=zorder)
+        shadow_patch.set_clip_path(piece_patch)
         
         outline_patch = mpl.patches.PathPatch(self.path, fc="none", ec="k", transform=self.transform + self.ax.transData, **self.kwargs, zorder=zorder)
-        return [piece_patch, unshadow_patch, outline_patch]
+        return [piece_patch, shadow_patch, outline_patch]
     
     def _add_special_patches(self, zorder=1.):
         if self.piece.code == Piece.KNIGHT:

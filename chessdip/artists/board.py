@@ -3,11 +3,9 @@
 import matplotlib as mpl
 import numpy as np
 
-from chessdip.board.square import Square
-
 class BoardArtist:
     """
-    Squares and supply centers
+    Artist for the board. This artist colors in squares appropriately.
     """
     def __init__(self, board, global_kwargs):
         self.board = board

@@ -7,10 +7,16 @@ from chessdip.board.board import Board
 
 class BoardInterface:
     """
-    Squares, supply centers, and pieces. Should have the same signature as
-    a Board object
+    Managing class for squares, supply centers, and pieces.
     """
     def __init__(self, setup, visualizer):
+        """
+        Parameters:
+        ----------
+        - setup: BoardSetup: data for how the board and pieces should be
+            initialized.
+        - visualizer: VisualInterface.
+        """
         self.visualizer = visualizer
         
         self.board = Board(setup)

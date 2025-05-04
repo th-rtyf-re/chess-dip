@@ -4,7 +4,7 @@ from chessdip.test import test_cases
 from chessdip.game import GameManager, standard_setup
 
 def sandbox():
-    GM = GameManager(setup=standard_setup)
+    GM = GameManager(board=standard_setup)
     GM.setup()
     GM.sandbox()
 
