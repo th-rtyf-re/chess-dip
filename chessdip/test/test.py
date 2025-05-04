@@ -1,5 +1,7 @@
 # -*-coding:utf8-*-
 
+import matplotlib.pyplot as plt
+
 from chessdip.game import GameManager, standard_setup
 
 """
@@ -24,6 +26,7 @@ TEST_CASES = [
     "6F2", "6F3", "6F4", "6F5", "6F6", "6F8",
     "6F14", "6F14A", "6F14B", "6F14C", "6F15", "6F16", "6F17", "6F18", "6F18A",
     "6F21", "6F22", "6F23", "6F24", "6F24A", "6F24B", "6F24C", "6F25",
+    "CDR1", "CDR2",
     "CDT1", "CDT2", "CDT3", "CDT4", "CDT5", "CDT6", "CDT7", "CDT8", "CDT8A",
         "CDT9", "CDT10", "CDT10A",
     "CDT11", "CDT12", "CDT13", "CDT14", "CDT15", "CDT16", "CDT17", "CDT18",
@@ -855,6 +858,26 @@ To do
 To do
 """
 
+# CD.R. RENDERS FOR CHESS DIP DOCUMENTATION
+# CD.R.1. RENDER, SETUP
+def test_CDR1():
+    GM.setup_pieces(england, ["K d1", "P c2", "N b1"]),
+    GM.setup_pieces(italy, ["K e1", "P e2", "B f1"]),
+    GM.setup_pieces(france, ["K e8", "P e7", "N g8"]),
+    GM.setup_pieces(scandinavia, ["K d8", "P d7", "B c8"])
+
+# CD.R.2. RENDER, FIRST PHASE
+def test_CDR2():
+    GM.setup_pieces(england, ["K d1", "P c2", "N b1"]),
+    GM.setup_pieces(italy, ["K e1", "P e2", "B f1"]),
+    GM.setup_pieces(france, ["K e8", "P e7", "N g8"]),
+    GM.setup_pieces(scandinavia, ["K d8", "P d7", "B c8"])
+    GM.process_orders(england, ["Kd1 e2", "Nb1 a3", "Pc2 d3"])
+    GM.process_orders(italy, ["Ke1 S Pe2 H", "Bf1 g2", "Pe2 H"])
+    GM.process_orders(france, ["Ke8 e7", "Ng8 S Ke8 e7", "Pe7 e6"])
+    GM.process_orders(scandinavia, ["Kd8 e8", "Bc8 a6", "Pd7 H"])
+    GM.adjudicate()
+
 # CD.T. TEST CASES, CHESS DIP SPECIFIC CASES
 # CD.T.1. TEST CASE, CROSSING CONVOYS
 def test_CDT1():
@@ -1189,12 +1212,19 @@ All commands are case insensitive:
             GM.clear_board()
         elif message == "progress":
             GM.progress()
+        elif message[:len("save")] == "save":
+            filename = message[len("save"):]
+            if not filename:
+                filename = "render.png"
+            elif '.' not in filename:
+                filename += ".png"
+            plt.savefig(filename, dpi=300)
         else: # find test and run it
             if len(message) < 2:
                 continue
             elif message[0] in "abcdefghij":
                 message = "6" + message.upper()
-            elif message[0] in "tv":
+            elif message[0] in "rtv":
                 message = "CD" + message.upper()
             
             if message in TEST_CASES:
