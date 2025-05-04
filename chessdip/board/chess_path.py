@@ -31,6 +31,9 @@ class ChessPath:
                 self.valid = abs(dfile) == 1 and abs(drank) in (0, -2)
             self.intermediate_squares = []
     
+    def __str__(self):
+        return f"Chess path for {self.piece} to {self.land}"
+    
     def validate_path(piece, start, land):
         if start == land:
             return False, []

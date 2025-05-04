@@ -99,11 +99,45 @@ class OrderInterface:
         self.visualizer.set_stale()
     
     def recompute_paths(self):
+        import warnings
+        warnings.warn("Recomputing paths is an experimental feature that will probably change in the future.")
+        
         CPAM = ChessPathArtistManager(self.visualizer)
-        for order, artist in self.artists.items():
-            if not isinstance(order, HoldOrder | BuildOrder | DisbandOrder | ConvoyOrder):
-                CPAM.add_path(artist.path_artist)
-        for order, artist in self.artists.items():
-            if not isinstance(order, HoldOrder | BuildOrder | DisbandOrder | ConvoyOrder):
-                artist.update_path(CPAM.get_path_from_vectors(artist.path_artist))
+        
+        items = [(order, artist) for order, artist in self.artists.items() if not isinstance(order, HoldOrder | BuildOrder | DisbandOrder | ConvoyOrder)]
+        
+        vertices_dict = {}
+        
+        for order, artist in items:
+            CPAM.add_path(artist.path_artist)
+        # # Adjust supports
+        # for order, artist in items:
+        #     if isinstance(order, SupportMoveOrder):
+        #         pass
+        # Compute most vertices
+        for order, artist in items:
+            vertices_dict[order] = CPAM.compute_vertices_from_vectors(artist.path_artist)
+        # Compute last vertex for supporting artists
+        for order, artist in items:
+            if isinstance(order, SupportMoveOrder):
+                other_vertices = vertices_dict[order.get_supported_order()]
+                last_vertices = CPAM.get_intersection(artist.path_artist, other_vertices, default=other_vertices[-2])
+                artist.path_artist.junction = last_vertices[-1]
+                vertices_dict[order].extend(last_vertices)
+            elif isinstance(order, SupportConvoyOrder):
+                square = order.get_landing_square()
+                supported_order = order.get_supported_order()
+                convoyed_order = supported_order.get_convoyed_order()
+                convoy_vertex = None
+                for vector in self.artists[convoyed_order].path_artist.vectors:
+                    if (vector.pos[0], vector.pos[1]) == (square.file, square.rank):
+                        convoy_vertex = vector.real_pos
+                other_vertices = vertices_dict[convoyed_order]
+                last_vertices = CPAM.get_intersection(artist.path_artist, other_vertices, ignore_last=True, default=convoy_vertex)
+                artist.path_artist.junction = last_vertices[-1]
+                # manually adjust things
+                vertices_dict[order] = vertices_dict[order][:-1] + last_vertices
+            artist.update_vertices(vertices_dict[order])
+            if isinstance(order, SupportOrder):
+                self.artists[order.get_supported_order()].update_support_patch(artist)
         self.visualizer.set_stale()

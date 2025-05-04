@@ -58,7 +58,7 @@ class OrderArtist:
         del self.support_patches[support_artist]
     
     def add_support(self, support_artist):
-        junction = self._get_support_junction(support_artist)
+        junction = support_artist.get_path_end()
         patch = mpl.patches.Circle(junction, **self.support_kwargs)
         self.support_patches[support_artist] = [patch]
         self._add_patches(self.support_patches[support_artist])
@@ -80,10 +80,22 @@ class OrderArtist:
             patch = mpl.patches.PathPatch(path, ec=ec, lw=lw, **self.patch_kwargs)
             self.patches.append(patch)
     
-    def update_path(self, path):
+    # def update_path(self, path):
+    #     for patch in self.patches:
+    #         patch.set_path(path)
+    #     # do something for support patches as well...
+    
+    def update_vertices(self, vertices):
+        path = Path(vertices, [Path.MOVETO] + [Path.LINETO] * (len(vertices) - 1))
         for patch in self.patches:
             patch.set_path(path)
         # do something for support patches as well...
+    
+    def update_support_patch(self, support_artist):
+        for patch in self.support_patches[support_artist]:
+            patch.remove()
+        self.support_patches[support_artist].clear()
+        self.add_support(support_artist)
     
     def get_virtual(self):
         return self.virtual
@@ -121,8 +133,8 @@ class MoveOrderArtist(OrderArtist):
     def __init__(self, order, global_kwargs):
         super().__init__(order, global_kwargs)
         
-        self.path_artist = ChessPathArtist(self.order.chess_path)
-        self.path = self.path_artist.compute_path(shrinkA=self.shrinkA, shrinkB=self.global_shrink)
+        self.path_artist = ChessPathArtist(self.order.chess_path, shrinkA=self.shrinkA, shrinkB=self.global_shrink)
+        self.path = self.path_artist.compute_path()
         arrow_style = mpl.patches.ArrowStyle("->", head_width=.2, head_length=.2)
         arrow_paths, _ = arrow_style.transmute(self.path, mutation_size=1, linewidth=0)
         arrow_path = Path.make_compound_path(*arrow_paths)
@@ -163,7 +175,7 @@ class MoveOrderArtist(OrderArtist):
                 return (x, ey)
     
     def _get_support_junction(self, support_artist):
-        return self.junction
+        return self._get_junction()
     
     def get_support_vector(self):
         """
@@ -171,7 +183,8 @@ class MoveOrderArtist(OrderArtist):
         """
         pass
     
-    def update_path(self, path):
+    def update_vertices(self, vertices):
+        path = Path(vertices, [Path.MOVETO] + [Path.LINETO] * (len(vertices) - 1))
         arrow_style = mpl.patches.ArrowStyle("->", head_width=.2, head_length=.2)
         arrow_paths, _ = arrow_style.transmute(path, mutation_size=1, linewidth=0)
         arrow_path = Path.make_compound_path(*arrow_paths)
@@ -197,8 +210,8 @@ class SupportOrderArtist(OrderArtist):
         super().__init__(order, global_kwargs)
         self.supported_artist = supported_artist
                 
-        self.path_artist = ChessPathArtist(self.order.chess_path)
         if type(self) is SupportOrderArtist:
+            self.path_artist = ChessPathArtist(self.order.chess_path)
             path = self.path_artist.compute_path()
             self.make_path_patches(path, path_type="support")
             self.set_virtual(order.virtual)
@@ -210,7 +223,8 @@ class SupportHoldOrderArtist(SupportOrderArtist):
     def __init__(self, order, supported_artist, global_kwargs):
         super().__init__(order, supported_artist, global_kwargs)
         
-        path = self.path_artist.compute_path(shrinkA=self.shrinkA, shrinkB=self.supported_artist.hold_radius)
+        self.path_artist = ChessPathArtist(self.order.chess_path, shrinkA=self.shrinkA, shrinkB=self.supported_artist.hold_radius)
+        path = self.path_artist.compute_path()
         self.make_path_patches(path, path_type="support")
         self.set_virtual(order.virtual)
 
@@ -219,7 +233,8 @@ class SupportMoveOrderArtist(SupportOrderArtist):
         super().__init__(order, supported_artist, global_kwargs)
         
         junction = self.supported_artist._get_support_junction(self)
-        path = self.path_artist.compute_path(shrinkA=self.shrinkA, junction=junction)
+        self.path_artist = ChessPathArtist(self.order.chess_path, shrinkA=self.shrinkA, junction=junction)
+        path = self.path_artist.compute_path()
         self.make_path_patches(path, path_type="support")
         self.set_virtual(order.virtual)
 
@@ -227,7 +242,10 @@ class SupportConvoyOrderArtist(SupportOrderArtist):
     def __init__(self, order, supported_artist, global_kwargs):
         super().__init__(order, supported_artist, global_kwargs)
         
-        path = self.path_artist.compute_path(shrinkA=self.shrinkA)
+        # junction = (self.order.get_landing_square().file, self.order.get_landing_square().rank)
+        # self.path_artist = ChessPathArtist(self.order.chess_path, shrinkA=self.shrinkA, junction=junction)
+        self.path_artist = ChessPathArtist(self.order.chess_path, shrinkA=self.shrinkA)
+        path = self.path_artist.compute_path()
         self.make_path_patches(path, path_type="support")
         self.set_virtual(order.virtual)
 
