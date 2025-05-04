@@ -14,10 +14,7 @@ class Adjudicator:
     Shoutouts to Lucas Kruijswijk (https://diplom.org/Zine/S2009M/Kruijswijk/DipMath_Chp6.htm)
     and Talia Parkinson (pydip) and DATC (https://webdiplomacy.net/doc/DATC_v3_0.html#5.E).
     """
-    def __init__(self, order_interface):
-        """
-        No hold orders, no convoys, no virtual orders!
-        """
+    def __init__(self, order_interface, verbose=False):
         self.order_interface = order_interface
         self.orders = self.order_interface.get_adjudicable_orders()
         self.result = {order: False for order in self.orders}
@@ -27,14 +24,17 @@ class Adjudicator:
         self.recursion_hits = 0
         self.uncertain = True
         
+        self.verbose = verbose
         self._debug_call_depth = 0
     
     def _debug_out(self, message):
-        print("│ " * self._debug_call_depth + message)
+        if self.verbose:
+            print("│ " * self._debug_call_depth + message)
     
     def _debug_out_decr(self, message):
-        self._debug_call_depth -= 1
-        print("│ " * self._debug_call_depth + "└ " + message)
+        if self.verbose:
+            self._debug_call_depth -= 1
+            print("│ " * self._debug_call_depth + "└ " + message)
     
     def _debug_optimistic(self, optimistic):
         return "optimistic" if optimistic else "pessimistic"
@@ -354,13 +354,13 @@ class Adjudicator:
     
     def _get_move(self, square):
         for order in self.order_interface.get_orders():
-            if isinstance(order, MoveOrder) and order.get_starting_square() == square:
+            if not order.get_virtual() and isinstance(order, MoveOrder) and order.get_starting_square() == square:
                 return order
         return None
     
     def _get_hold(self, square): # even a virtual hold
         for order in self.order_interface.get_orders():
-            if isinstance(order, HoldOrder) and order.get_starting_square() == square:
+            if not order.get_virtual() and isinstance(order, HoldOrder) and order.get_starting_square() == square:
                 return order
         return None
     
