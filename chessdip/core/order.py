@@ -151,7 +151,7 @@ class MoveOrder(Order):
             console.out(f"{self.piece} cannot move to {self.landing_square}.")
             return False
         # Successful move
-        if self.piece.code == Piece.PAWN and board.get_piece(self.landing_square) is None:
+        if self.piece.code == Piece.PAWN and self.is_attack() and board.get_piece(self.landing_square) is None:
             console.out(f"{self.piece} successfully attacked, but does not move to, {self.landing_square}.")
             return True
         
