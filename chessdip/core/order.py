@@ -187,12 +187,12 @@ class ConvoyOrder(Order):
         if self.virtual:
             return False
         elif not self.success:
-            console.out(f"{self.square} failed to convoy {self.convoyed_order}.")
+            # console.out(f"{self.square} failed to convoy {self.convoyed_order}.")
             return False
         elif self.square in self.convoyed_order.get_intermediate_squares():
-            console.out(f"{self.square} convoyed {self.convoyed_order}.")
+            # console.out(f"{self.square} convoyed {self.convoyed_order}.")
             return True
-        console.out(f"{self.square} cannot support {self.convoyed_order}.")
+        # console.out(f"{self.square} cannot support {self.convoyed_order}.")
         return False
 
 class SupportOrder(Order):
