@@ -8,7 +8,7 @@ the variant, using `matplotlib` as a renderer. This a work in progress.
 
 ## Variant rules
 
-Read `RULES.md` for the rules.
+Read [`RULES.md`](/docs/RULES.md) for the rules.
 
 ## How to run the program
 
