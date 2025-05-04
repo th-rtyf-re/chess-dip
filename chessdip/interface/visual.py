@@ -40,6 +40,12 @@ class LineDataUnits(mpl.lines.Line2D):
 
     _linewidth = property(_get_lw, _set_lw)
 
+# from matplotlib import font_manager
+# font_path = "chessdip/interface/font/Figtree-Regular.otf" # Your font path goes here,
+# font_manager.fontManager.addfont(font_path)
+# prop = font_manager.FontProperties(fname=font_path)
+# plt.rcParams['font.sans-serif'] = "Figtree"
+
 class VisualInterface:
     """
     The figure/axes of the game instance. This class also creates the
@@ -47,7 +53,9 @@ class VisualInterface:
     """
     def __init__(self):
         mpl.rcParams['toolbar'] = 'None'
-        self.fig, self.ax = plt.subplots(1, 1, layout="tight")
+        self.fig, self.ax = plt.subplots(1, 1, num="Chess Dip", figsize=(5, 5))
+        margin = .07
+        self.fig.subplots_adjust(left=margin, bottom=margin, right=1 - margin, top=1 - margin)
         self.stale = False
         
         self.global_kwargs = dict(
@@ -75,6 +83,10 @@ class VisualInterface:
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
             self.stale = False
+    
+    def set_title(self, title):
+        self.ax.set_title(title)
+        self.stale = True
     
     def make_board_artist(self, board):
         return BoardArtist(board, self.global_kwargs)

@@ -1,5 +1,7 @@
 # -*-coding:utf8-*-
 
+import matplotlib.pyplot as plt
+
 from chessdip.board.piece import Piece
 from chessdip.board.chess_path import ChessPath
 from chessdip.core.order import (
@@ -53,6 +55,7 @@ class GameManager:
         
         self.year = 1
         self.phase = Phase.SPRING
+        self.set_title()
     
     def clear_board(self):
         self.board.clear()
@@ -138,6 +141,11 @@ class GameManager:
         for order in disband_orders:
             self.order_manager.add(order)
     
+    def set_title(self):
+        phase_str = ["Winter", "Spring", "Fall"][self.phase]
+        year_str = str(self.year) if self.year >= 9 else f"0{self.year}"
+        self.visualizer.set_title(f"{phase_str} {year_str}")
+    
     def progress(self):
         self.board.clear_en_passant()
         for order in self.order_manager.get_orders():
@@ -149,6 +157,7 @@ class GameManager:
         elif self.phase == Phase.WINTER:
             self.year += 1
         self.phase = Phase((self.phase + 1) % Phase.N_PHASES)
+        self.set_title()
     
     def update_sc_ownership(self):
         self.board.update_sc_ownership()
