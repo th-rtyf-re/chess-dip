@@ -6,24 +6,9 @@ from chessdip.board.piece import Piece
 from chessdip.board.power import Side
 
 class Board:
-    default_sc_mask = np.array([
-        [1, 1, 0, 1, 1, 1, 0, 1],
-        [0, 0, 1, 0, 1, 0, 0, 1],
-        [0, 0, 1, 0, 1, 0, 1, 0],
-        [0, 0, 1, 0, 1, 0, 0, 0],
-        [1, 1, 0, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 1, 0, 1],
-        [0, 1, 0, 1, 1, 0, 0, 0],
-        [1, 0, 1, 1, 1, 0, 1, 1]
-    ], dtype=bool)
-    
-    def __init__(self, powers, sc_mask=None):
-        if sc_mask is None:
-            self.sc_mask = Board.default_sc_mask
-        else:
-            self.sc_mask = sc_mask
-        
-        self.powers = powers
+    def __init__(self, setup):
+        self.sc_mask = setup.sc_mask
+        self.powers = setup.powers
         self.pieces = []
         self.ownership = np.zeros((8, 8), dtype=int)
         self.sc_ownership = np.zeros((8, 8), dtype=int)
@@ -32,7 +17,7 @@ class Board:
     
     def set_ownership(self, square, power):
         old_code = self.ownership[square.rank, square.file]
-        new_code = power.get_code()
+        new_code = self.powers.index(power)
         if old_code != new_code:
             self.ownership[square.rank, square.file] = new_code
             return True
@@ -42,9 +27,9 @@ class Board:
         if not self.sc_mask[square.rank, square.file]:
             return False
         old_code = self.sc_ownership[square.rank, square.file]
-        new_code = power.get_code()
+        new_code = self.powers.index(power)
         if old_code != new_code:
-            self.sc_ownership[square.rank, square.file] = power.get_code()
+            self.sc_ownership[square.rank, square.file] = self.powers.index(power)
             return True
         return False
     

@@ -1,6 +1,7 @@
 # -*-coding:utf8-*-
 
 from chessdip.board.square import Square
+from chessdip.board.power import Side
 from chessdip.board.piece import Piece
 from chessdip.board.board import Board
 
@@ -9,10 +10,10 @@ class BoardInterface:
     Squares, supply centers, and pieces. Should have the same signature as
     a Board object
     """
-    def __init__(self, powers, visualizer):
+    def __init__(self, setup, visualizer):
         self.visualizer = visualizer
         
-        self.board = Board(powers)
+        self.board = Board(setup)
         self.board_artist = self.visualizer.make_board_artist(self.board)
         self.visualizer.add_artist(self.board_artist)
         
@@ -67,6 +68,18 @@ class BoardInterface:
         if changed:
             self.board_artist.set_sc_owner(square, power)
             self.visualizer.set_stale()
+    
+    def update_sc_ownership(self):
+        for piece in self.get_pieces():
+            square = piece.get_square()
+            if square.rank >= 2 and square.rank < 6:
+                self.set_sc_ownership(square, piece.get_power())
+            elif piece.code == Piece.PAWN:
+                if piece.get_power().side == Side.WHITE and square.rank == 7:
+                    self.set_sc_ownership(square, piece.get_power())
+                elif piece.get_power().side == Side.BLACK and square.rank == 0:
+                    self.set_sc_ownership(square, piece.get_power())
+        self.visualizer.set_stale()
     
     def vacate_square(self, square):
         for piece in self.get_pieces():

@@ -10,25 +10,21 @@ class Side(IntEnum):
     BLACK = 2
 
 class Power:
-    def __init__(self, code, name, palette, side, d_king=False):
-        self.code = code
+    def __init__(self, name, palette, side, d_king=False):
         self.name = name
         if side == Side.WHITE:
-            self.piece_color = (palette.white, palette.neutral)# tuple: fc, highlight
+            self.piece_color = (palette.white, palette.neutral) # tuple: fc, highlight
         elif side == Side.BLACK:
             self.piece_color = (palette.neutral, palette.black)
         else:
             self.piece_color = (palette.neutral, palette.neutral)
-        self.square_color = (palette.dark, palette.light)# tuple: dark, light
+        self.square_color = (palette.dark, palette.light) # tuple: dark, light
         self.path_color = palette.neutral
-        self.side = side# 0 for neutral, -1 for white, -2 for black
+        self.side = side
         self.d_king = d_king
     
     def __str__(self):
         return self.name
-    
-    def get_code(self):
-        return self.code
     
     def get_king_square(self):
         file = 3 if self.d_king else 4 # d else e
