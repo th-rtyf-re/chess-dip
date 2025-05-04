@@ -4,7 +4,9 @@ This Diplomacy variant was created for the DiploStrats Diplomacy variant
 design contest. This repository contains a `Python` implementation of
 the variant, using `matplotlib` as a renderer. This a work in progress.
 
-![A spring 01 phase](/docs/images/r2.png)
+<p align="center">
+    <img width="500" src="/docs/images/r2.png" alt="A spring 01 phase">
+</p>
 
 ## Variant rules
 
