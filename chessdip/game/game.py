@@ -8,10 +8,10 @@ from chessdip.core.adjudicator import Adjudicator
 from chessdip.interface.board import BoardInterface
 from chessdip.interface.visual import VisualInterface
 
-from chessdip.ui.parser import Parser
-from chessdip.ui.game_setup import GameSetup
-from chessdip.ui.phase import Phase
-from chessdip.ui.order_manager import OrderManager
+from chessdip.game.parser import Parser
+from chessdip.game.game_setup import GameSetup
+from chessdip.game.phase import Phase
+from chessdip.game.order_manager import OrderManager
 
 class Console:
     def __init__(self):

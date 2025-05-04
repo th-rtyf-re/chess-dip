@@ -1,7 +1,7 @@
 # -*-coding:utf8-*-
 
 from chessdip.test import test_cases
-from chessdip.ui import GameManager, standard_setup
+from chessdip.game import GameManager, standard_setup
 
 def sandbox():
     GM = GameManager(setup=standard_setup)

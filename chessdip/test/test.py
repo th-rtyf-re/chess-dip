@@ -1,6 +1,6 @@
 # -*-coding:utf8-*-
 
-from chessdip.ui import GameManager, standard_setup
+from chessdip.game import GameManager, standard_setup
 from chessdip.board.power import Power, Side
 from chessdip.artists.palette import PowerPalette
 
