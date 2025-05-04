@@ -1,0 +1,1 @@
+from chessdip.test.test import test_cases
