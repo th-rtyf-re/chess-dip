@@ -183,6 +183,7 @@ class GameManager:
         self.console = Console()
         self.board = BoardInterface(self.powers, self.visualizer)
         self.parser = Parser(Order)
+        self.adjudicator_verbose = False
     
     def clear_board(self):
         self.board.clear()
@@ -194,8 +195,30 @@ class GameManager:
         self._next_power_code += 1
         return power
     
+    def get_powers(self, variant=None):
+        if variant is None:
+            return self.powers
+        elif variant == "chess-dip":
+            red = PowerPalette("darkred", "indianred", "firebrick", "lightsalmon", "mistyrose")
+            green = PowerPalette("darkgreen", "forestgreen", "xkcd:green", "lightgreen", "honeydew")
+            blue = PowerPalette("midnightblue", "steelblue", "royalblue", "lightskyblue", "aliceblue")
+            yellow = PowerPalette("saddlebrown", "darkgoldenrod", "goldenrod", "palegoldenrod", "lightyellow")
+            england = self.add_power("England", red, Side.WHITE, d_king=True)
+            italy = self.add_power("Italy", green, Side.WHITE)
+            france = self.add_power("France", blue, Side.BLACK)
+            scandinavia = self.add_power("Scandinavia", yellow, Side.BLACK, d_king=True)
+            return [england, italy, france, scandinavia]
+    
     def update_view(self):
         self.visualizer.render()
+    
+    def setup(self, variant=None):
+        if variant == "chess-dip":
+            england, italy, france, scandinavia = self.get_powers(variant="chess-dip")
+            self.setup_pieces(england, ["K d1", "P c2", "N b1"])
+            self.setup_pieces(italy, ["K e1", "P e2", "B f1"])
+            self.setup_pieces(france, ["K e8", "P e7", "N g8"])
+            self.setup_pieces(scandinavia, ["K d8", "P d7", "B c8"])
     
     def setup_pieces(self, power, notations):
         for notation in notations:
@@ -227,9 +250,12 @@ class GameManager:
                         return order
         return None
     
+    def set_adjudicator_verbose(self, verbose):
+        self.adjudicator_verbose = verbose
+    
     def adjudicate(self):
         self._add_holds()
-        adjudicator = Adjudicator(self.order_manager)
+        adjudicator = Adjudicator(self.order_manager, verbose=self.adjudicator_verbose)
         adjudicator.adjudicate()
         self._make_disbands()
     
@@ -426,7 +452,32 @@ class GameManager:
                 self.console.out("Exiting sandbox.")
                 return
             elif message in ["help"]:
-                self.console.out("Type \"power\" to specify your power. Type \"build\" to build. Type \"exit\" or \"quit\" to exit.")
+                self.console.out(
+"""
+==== ENTERING ORDERS ====
+Before entering an order, make sure that you have specified your power
+by entering "power <name>". Consult the `RULES.md` file for how to write
+orders. Example: as Italy, you may order Kd1 e1.
+
+==== OTHER COMMANDS ====
+All commands are case insensitive:
+ - adjudicate, or any distinct prefix (e.g. "adj"): adjudicate the
+   current order set.
+ - clear: clear the board.
+ - exit: exit the sandbox. Alias: quit.
+ - help: print this message.
+ - orders: print the current order set.
+ - power <name>: specify the current power. <name> can be a distinct
+   prefix, e.g. "ita" for "Italy".
+ - progress: progress the board by moving pieces.
+ - quit: exit the sandbox. Alias: exit.
+ - redraw (EXPERIMENTAL): redraw paths so that there is less overlap.
+   This is an experimental feature.
+ - remove <square>: remove the order on the given square.
+ - save <filename>: save the current board via Matplotlib's `savefig`
+   function. Default extension is `.png`.
+"""[1:-1] # remove first and last newlines
+                )
             elif message == "orders":
                 if not self.order_manager.has_orders():
                     self.console.out("No orders to display.")
@@ -452,9 +503,13 @@ class GameManager:
                 if square is None:
                     continue
                 order = self._find_order_on_square(square, virtual=False)
-                if order is not None:
+                if order is None:
+                    continue
+                elif order.get_piece().get_power() != power:
+                    self.console.out(f"Cannot remove another power's order.")
+                else:
                     self.order_manager.retract(order)
-            elif message == "recompute"[:len(message)]:
+            elif message == "redraw"[:len(message)]:
                 self.order_manager.recompute_paths()
             elif message[:len("save")] == "save":
                 filename = message[len("save"):]
