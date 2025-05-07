@@ -1,13 +1,14 @@
 # -*-coding:utf8-*-
 
 import bisect
+from collections import defaultdict
 from enum import IntEnum
 from matplotlib.path import Path
 import numpy as np
 
 from chessdip.board.chess_path import ChessPath
 
-class Direction(IntEnum):
+class Slope(IntEnum):
     H = 0 # horizontal
     D = 1 # diagonal
     V = 2 # vertical
@@ -17,23 +18,24 @@ class ChessPathVector:
     """
     A path vector gives the direction that a path will take.
     """
-    def __init__(self, pos, direc, orient, bias=0.):
+    def __init__(self, pos, slope, orient, bias=0., check_more=0):
         self.pos = np.asarray(pos)
-        self.direc = direc
+        self.slope = slope
         self.orient = orient
         self.bias = bias
+        self.check_more = check_more
         
         self.slot = None
         
         self.real_pos = self.pos
         self.unit = None # unit vector following vector
-        if self.direc == Direction.H:
+        if self.slope == Slope.H:
             self.unit = np.array([1., 0.])
-        elif self.direc == Direction.D:
+        elif self.slope == Slope.D:
             self.unit = np.array([np.sqrt(2) / 2., np.sqrt(2) / 2.])
-        elif self.direc == Direction.V:
+        elif self.slope == Slope.V:
             self.unit = np.array([0., 1.])
-        elif self.direc == Direction.A:
+        elif self.slope == Slope.A:
             self.unit = np.array([-np.sqrt(2) / 2., np.sqrt(2) / 2.])
         
         if not self.orient: # negative orientation
@@ -42,13 +44,19 @@ class ChessPathVector:
         self.shift_vec = np.asarray((self.unit[1], -self.unit[0])) # shifting to the right
     
     def __str__(self):
-        return f"Vector at {self.pos} in direction {self.direc}"
+        return f"Vector at {self.pos} with slope {self.slope}"
     
     def __repr__(self):
-        return f"Vector({self.pos}, {self.direc}, {self.orient}, bias={self.bias})"
+        return f"Vector({self.pos}, {self.slope}, {self.orient}, bias={self.bias})"
     
     def set_bias(self, bias):
         self.bias = bias
+    
+    def add_bias(self, bias):
+        self.bias += bias
+    
+    def set_check_more(self, check_more):
+        self.check_more = check_more
     
     def set_shift(self, shift):
         self.real_pos = self.pos + shift * self.shift_vec
@@ -60,127 +68,203 @@ class ChessPathVector:
     
     def get_shift(self):
         return np.dot(self.real_pos - self.pos, self.shift_vec)
-    
-    def get_orient(self):
-        return self.orient
 
-class VectorAnchor:
+# class VectorAnchor:
     """
-    Manager for anchors at a given position and slope (direction or its
-    opposite).
+    Manager for anchors at a given position and slope.
     
     Vectors are placed at anchors, which are at all half-integer coordinates.
     The anchor keeps track of the vectors that are located at its position,
     and computes (?) how these vectors are shifted to avoid overlapping paths.
     """
-    def __init__(self, pos, direc):
-        self.pos = pos
-        self.direc = direc
-        self.vectors = []
+#     def __init__(self, pos, slope):
+#         self.pos = pos
+#         self.slope = slope
+#         self.vectors = []
     
-    def add_vector(self, vector):
-        # do a sorted insert (w.r.t. bias) into the list
-        bisect.insort(self.vectors, vector, key=lambda v: v.bias)
-        pass
+#     def add_vector(self, vector):
+#         # do a sorted insert (w.r.t. bias) into the list
+#         bisect.insort(self.vectors, vector, key=lambda v: v.bias)
+#         pass
     
-    def get_shift(self, vector):
-        if vector not in self.vectors:
-            return None
-        idx = self.vectors.index(vector)
-        shift = idx - ((len(self.vectors) - 1) / 2)
-        return shift
+#     def get_shift(self, vector):
+#         if vector not in self.vectors:
+#             return None
+#         idx = self.vectors.index(vector)
+#         shift = idx - ((len(self.vectors) - 1) / 2)
+#         return shift
+
+class SortedVectorList(list):
+    def __init__(self):
+        super().__init__()
+    
+    def append(self, vector):
+        bisect.insort(self, vector, key=lambda v: v.bias)
+
+class VectorQuiver:
+    def __init__(self):
+        self.slots = []
+    
+    def __contains__(self, item):
+        for slot in self.slots:
+            if item in slot:
+                return True
+        return False
+    
+    def __str__(self):
+        return self.slots.__str__()
+    
+    def clear(self):
+        self.slots.clear()
+    
+    def disjoint(self, vectors):
+        for vector in vectors:
+            if vector in self:
+                return False
+        return True
+    
+    def index(self, vector):
+        for i, slot in enumerate(self.slots):
+            if vector in slot:
+                return i
+        return None
+    
+    def union(self, vectors):
+        """
+        Assume that `vectors` is sorted (by bias)
+        """
+        # Find slots containing elements of `vectors`
+        indices = []
+        prev_idx = 0
+        current_idx = 0
+        for i, vector in enumerate(vectors):
+            j = self.index(vector)
+            if j is not None:
+                indices.append((i, j))
+        indices.append((len(vectors), -1))
+        
+        j = 0 # slot index
+        meta_idx = 0
+        i0, j0 = indices[meta_idx] # current marked index
+        for i, vector in enumerate(vectors):
+            if i < i0 and j < j0:
+                self.slots[j].append(vector)
+                j += 1
+            elif i < i0: # j == j0; need to create a new slot
+                if j0 >= 0:
+                    self.slots.insert(j0, [vector])
+                else:
+                    self.slots.append([vector])
+            else: # i == i0; go to next already-present vector
+                j = j0
+                meta_idx += 1
+                i0, j0 = indices[meta_idx]
+                    
 
 class ChessPathArtistManager:
     def __init__(self, visualizer, clockwise=True):
-        self.global_kwargs = visualizer.global_kwargs
         self.clockwise = clockwise
         
-        # self.artists = []
-        self.anchors = [] # dict of {(half-int, half-int): VectorAnchor}
+        self.path_width = visualizer.global_kwargs["path_width"] / 30 # in data units
+        self.anchors = defaultdict(SortedVectorList)
     
     def add_path(self, path_artist):
-        # self.artists.append(path_artist)
         vectors = path_artist.compute_vectors(self.anchors)
         origin = np.asarray((path_artist.chess_path.start.file, path_artist.chess_path.start.rank))
         anchored_vectors = vectors[1:-1] if path_artist.junction is None else vectors[1:]
         for vector in anchored_vectors:
             # bias is sin(angle) between the Vector and the direction of the path start
             ref_vec = vector.unit if vector.orient else -vector.unit
-            bias = np.cross(origin - vector.pos, ref_vec) / np.linalg.norm(origin - vector.pos)
-            vector.set_bias(bias)
-            found_anchor = False
-            for anchor in self.anchors:
-                if np.all(anchor.pos == vector.pos) and anchor.direc == vector.direc:
-                    anchor.add_vector(vector)
-                    found_anchor = True
-                    break
-            if not found_anchor:
-                anchor = VectorAnchor(vector.pos, vector.direc)
-                anchor.add_vector(vector)
-                self.anchors.append(anchor)
+            if np.any(origin - vector.pos):
+                bias = np.cross(origin - vector.pos, ref_vec) / np.linalg.norm(origin - vector.pos)
+            else:
+                bias = 0.
+            vector.add_bias(bias)
     
     def shift_vectors(self):
-        """
-        in each rank/file/diagonal/antidiagonal with half-int coords, go
-        through each anchor, compiling a list of all present vectors.
+        quiver = VectorQuiver()
+        # horizontal
+        for j in range(17):
+            for i in range(17):
+                self._aux_shift_vectors(quiver, i, j, Slope.H)
+            self._shift_and_clear_quiver(quiver)
         
-        This list is actually a list of lists, where each sublist is a set of
-        vectors in the same slot.
+        # vertical
+        for i in range(17):
+            for j in range(17):
+                self._aux_shift_vectors(quiver, i, j, Slope.V)
+            self._shift_and_clear_quiver(quiver)
         
-        At each anchor, identify the vectors that are already on the list:
-        for the remaining vectors, add them to the lists in between the
-        already-present vectors; if no space then insert a new slot.
+        # diagonal
+        for k in range(33):
+            for l in range(17 - abs(16 - k)):
+                i = max(0, 16 - k) + l
+                j = max(0, k - 16) + l
+                self._aux_shift_vectors(quiver, i, j, Slope.D)
+            self._shift_and_clear_quiver(quiver)
         
-        Maybe insert the new slot in the middle, as best as possible? Don't do
-        this on the first attempt.
-        """
+        # anti-diagonal
+        for k in range(33):
+            for l in range(17 - abs(16 - k)):
+                i = max(0, k - 16) + l
+                j = min(k, 16) - l
+                self._aux_shift_vectors(quiver, i, j, Slope.A)
+            self._shift_and_clear_quiver(quiver)
+        
+    def _aux_shift_vectors(self, quiver, i, j, slope):
+        if (i, j, slope) in self.anchors:
+            vectors = self.anchors[i, j, slope]
+            if quiver.disjoint(vectors):
+                self._shift_and_clear_quiver(quiver)
+            quiver.union(vectors)
+    
+    def _shift_and_clear_quiver(self, quiver):
+        n = len(quiver.slots)
+        for i, slot in enumerate(quiver.slots):
+            shift = i - ((n - 1) / 2)
+            for vector in slot:
+                vector.shift(shift, path_width=self.path_width)
+        quiver.clear()
+    
+    def get_real_position_on_square(self, path_artist, square):
+        i, j = pos_to_idx(square.file, square.rank)
+        for slope in [Slope.H, Slope.D, Slope.V, Slope.A]:
+            if (i, j, slope) in self.anchors:
+                for vector in self.anchors[i, j, slope]:
+                    if vector in path_artist.vectors:
+                        square_pos = np.asarray((square.file, square.rank))
+                        real_pos = vector.real_pos - vector.pos + square_pos
+                        return real_pos
+        return None
     
     def compute_vertices_from_vectors(self, path_artist):
-        vectors = path_artist.vectors
+        vectors = path_artist.get_all_vectors()
         # print("hi", vectors)
-        # Shift vectors except for the first and last one
-        anchored_vectors = vectors[1:-1] if path_artist.junction is None else vectors[1:]
-        for vector in anchored_vectors:
-            for anchor in self.anchors:
-                if np.all(anchor.pos == vector.pos) and anchor.direc == vector.direc:
-                    shift = anchor.get_shift(vector)
-                    vector.shift(shift, path_width=self.global_kwargs["path_width"]/30)
-                    break
-        # Find vertices
         vertices = []
         i = 0
+        vec0 = vectors[0]
         while i < len(vectors) - 1:
-            vec0 = vectors[i]
             vec1 = vectors[i + 1]
-            if vec0.direc == vec1.direc: # hopefully no switchbacks
-                # need to insert a vector
-                if vec0.get_shift() < vec1.get_shift():
-                    new_direc = Direction((vec0.direc - 1) % 4)
-                    new_orient = vec0.orient if vec0.direc > 0 else not vec0.orient
-                else:
-                    new_direc = Direction((vec0.direc + 1) % 4)
-                    new_orient = vec0.orient if vec0.direc < 3 else not vec0.orient
-                new_vec = ChessPathVector((vec0.pos + vec1.pos) / 2, new_direc, new_orient)
-                vectors.insert(i + 1, new_vec)
-                # need to compute bias as well
-                for anchor in self.anchors:
-                    if np.all(anchor.pos == new_vec.pos) and anchor.direc == new_vec.direc:
-                        anchor.add_vector(new_vec)
-                        shift = anchor.get_shift(new_vec)
-                        # print(f"shifting {new_vec} by {shift}")
-                        new_vec.shift(shift, path_width=self.global_kwargs["path_width"]/30)
-                vec1 = new_vec
             # find intersection
-            # print(vec0, vec1, vec0.real_pos, vec1.real_pos)
             x, _, _, _ = np.linalg.lstsq(np.array([vec0.unit, -vec1.unit]).T, vec1.real_pos - vec0.real_pos, rcond=None)
-            v_inter = vec0.real_pos + x[0] * vec0.unit
+            min_x0 = x[0]
+            min_idx = i + 1
+            for k in range(vec0.check_more):
+                next_vec = vectors[i + k + 2]
+                x, _, _, _ = np.linalg.lstsq(np.array([vec0.unit, -next_vec.unit]).T, next_vec.real_pos - vec0.real_pos, rcond=None)
+                if x[0] < min_x0:
+                    min_x0 = x[0]
+                    min_idx = i + k + 2
+                    vec1 = next_vec
+            v_inter = vec0.real_pos + min_x0 * vec0.unit
             # print(f"{vec0} and {vec1} intersect at {v_inter}")
             vertices.append(v_inter)
-            i += 1
+            vec0 = vec1
+            i = min_idx
         return vertices
     
-    def get_intersection(self, path_artist, other_vertices, ignore_last=False, default=None):
-        vec = path_artist.vectors[-2] if ignore_last else path_artist.vectors[-1]
+    def get_intersection(self, path_artist, other_vertices, default=None):
+        vec = path_artist.vectors[-1]
         i = len(other_vertices) - 1
         while i > 0:
             v0 = other_vertices[i - 1]
@@ -190,17 +274,17 @@ class ChessPathArtistManager:
                 return [v_inter]
             i -= 1
         # Backup: add segment to connect to main vertex
-        # define vector from default: direction/orient based on vec; get
+        # define vector from default: slope/orient based on vec; get
         # intersection
         if default is not None:
             bias = np.cross(default - vec.real_pos, vec.unit) / np.linalg.norm(default - vec.real_pos)
             if bias > 0: # default destination is to the right of `vec`
-                new_direc = Direction((vec.direc - 1) % 4)
-                new_orient = vec.orient if vec.direc > 0 else not vec.orient
+                new_slope = Slope((vec.slope - 1) % 4)
+                new_orient = vec.orient if vec.slope > 0 else not vec.orient
             else:
-                new_direc = Direction((vec.direc - 1) % 4)
-                new_orient = vec.orient if vec.direc < 3 else not vec.orient
-            new_vec = ChessPathVector(default, new_direc, new_orient)
+                new_slope = Slope((vec.slope + 1) % 4)
+                new_orient = vec.orient if vec.slope < 3 else not vec.orient
+            new_vec = ChessPathVector(default, new_slope, new_orient)
             x, _, _, _ = np.linalg.lstsq(np.array([vec.unit, -new_vec.unit]).T, new_vec.real_pos - vec.real_pos, rcond=None)
             v_inter = vec.real_pos + x[0] * vec.unit
             return [v_inter, default]
@@ -228,10 +312,16 @@ def _get_intersection(vec, v0, v1):
     else:
         return None
 
+def pos_to_idx(x, y):
+    return int(2 * x + 1), int(2 * y + 1)
+
+def idx_to_pos(i, j):
+    return (i - 1.) / 2., (j - 1.) / 2.
+
 class ChessPathArtist:
     """
     Artist that compute the visual path of an order. The general design is
-    that valid moves follow vertical, horizontal, and diagonal directions,
+    that valid moves follow vertical, horizontal, and diagonal slopes,
     while invalid moves are a simple straight line from the starting square
     to the landing square.
     """
@@ -256,6 +346,9 @@ class ChessPathArtist:
         self.shrinkA = shrinkA
         self.shrinkB = shrinkB
         self.clockwise = clockwise
+        
+        self.first_vec = None
+        self.last_vec = None
         self.vectors = []
     
     def compute_path(self):
@@ -387,128 +480,98 @@ class ChessPathArtist:
             direction = direction / norm
         return tuple(v_next - shrink * direction)
     
+    def get_vectors(self):
+        return self.vectors
+    
+    def get_all_vectors(self):
+        ret = []
+        if self.first_vec is not None:
+            ret.append(self.first_vec)
+        ret.extend(self.vectors)
+        if self.last_vec is not None:
+            ret.append(self.last_vec)
+        return ret
+    
     def compute_vectors(self, anchors):
         """
-        Experimental; like `compute_vertices` but with Vectors.
+        Assume the path is valid
         """
         x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
-        if not self.chess_path.valid:
-            if self.junction is None:
-                x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
-            else:
-                x1, y1 = self.junction
-            direc, orient = _get_direc_orient((x0, y0), (x1, y1))
-            vec = ChessPathVector((x0, y0), direc, orient)
-            
-            first_direc = Direction((direc + 2) % 4)
-            if direc == Direction.H or direc == Direction.D:
-                first_orient = orient
-            else:
-                first_orient = not orient
-            x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
-            first_vec = ChessPathVector((x0, y0), first_direc, first_orient)
-            first_vec.set_shift(self.shrinkA)
-            
-            last_direc = Direction((direc - 2) % 4)
-            if direc == Direction.H or direc == Direction.D:
-                last_orient = not orient
-            else:
-                last_orient = orient
-            last_vec = ChessPathVector((x1, y1), last_direc, last_orient)
-            last_vec.set_shift(self.shrinkB)
-            self.vectors = [first_vec, vec, last_vec]
-            return self.vectors
+        self.vectors = []
+        current_direction = (None, None)
+        current_vec = None
+        squares = [(square.file, square.rank) for square in self.chess_path.intermediate_squares]
+        if self.junction is None:
+            squares.append((self.chess_path.land.file, self.chess_path.land.rank))
         
-        first_vector = True
-        for square in self.chess_path.intermediate_squares:
-            x1, y1 = square.file, square.rank
+        for x1, y1 in squares:
             if abs(x1 - x0) > 1 or abs(y1 - y0) > 1:
-                # if the next square is not adjacent, then we add a connecting path
+                # non adjacent square
                 ax, ay = self._closest_corner((x0, y0), (x1, y1), clockwise=self.clockwise)
                 bx, by = self._closest_corner((x1, y1), (x0, y0), clockwise=not self.clockwise)
-                direc, orient = _get_direc_orient((x0, y0), (ax, ay))
-                if first_vector:
-                    self.vectors.append(ChessPathVector((ax, ay), direc, orient))
-                    first_vector = False
+                slope, orient = _get_slope_orient((x0, y0), (ax, ay))
+                if current_vec is None:
+                    self._get_first_vec((x0, y0), slope, orient)
+                    current_vec = ChessPathVector((ax, ay), slope, orient)
+                    current_direction = slope, orient
+                    self.vectors.append(current_vec)
+                elif (slope, orient) != current_direction:
+                    current_vec = ChessPathVector((x0, y0), slope, orient)
+                    self.vectors.append(current_vec)
+                    anchors[*pos_to_idx(x0, y0), slope].append(current_vec)
                 else:
-                    self.vectors.append(ChessPathVector((x0, y0), direc, orient))
-                connecting_vectors = self._connecting_vectors((ax, ay), (bx, by))
+                    anchors[*pos_to_idx(x0, y0), slope].append(current_vec)
+                anchors[*pos_to_idx(ax, ay), slope].append(current_vec)
+                connecting_vectors = self._connecting_vectors((ax, ay), (bx, by), anchors)
                 self.vectors.extend(connecting_vectors)
-                # x0, y0 = bx, by
-                direc, orient = _get_direc_orient((bx, by), (x1, y1))
-                self.vectors.append(ChessPathVector((bx, by), direc, orient))
+                
+                slope, orient = _get_slope_orient((bx, by), (x1, y1))
+                current_vec = ChessPathVector((bx, by), slope, orient)
+                current_direction = slope, orient
+                self.vectors.append(current_vec)
+                anchors[*pos_to_idx(bx, by), slope].append(current_vec)
             else:
-                direc, orient = _get_direc_orient((x0, y0), (x1, y1))
-                if first_vector:
-                    first_vector = False
+                slope, orient = _get_slope_orient((x0, y0), (x1, y1))
+                ax, ay = (x0 + x1) / 2, (y0 + y1) / 2
+                if current_vec is None:
+                    self._get_first_vec((x0, y0), slope, orient)
+                    current_vec = ChessPathVector((ax, ay), slope, orient)
+                    current_direction = slope, orient
+                    self.vectors.append(current_vec)
+                elif (slope, orient) != current_direction: # should not happen
+                    current_vec = ChessPathVector((x0, y0), slope, orient)
+                    current_direction = slope, orient
+                    self.vectors.append(current_vec)
+                    anchors[*pos_to_idx(x0, y0), slope].append(current_vec)
                 else:
-                    vectors.append(ChessPathVector((x0, y0), direc, orient))
-                self.vectors.append(ChessPathVector(((x0 + x1) / 2, (y0 + y1) / 2), direc, orient))
+                    anchors[*pos_to_idx(x0, y0), slope].append(current_vec)
+                anchors[*pos_to_idx(ax, ay), slope].append(current_vec)
             x0, y0 = x1, y1
         
         # Landing square
-        if self.junction is None: # use shrinkB
+        if self.junction is None:
             x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
-            if abs(x1 - x0) > 1 or abs(y1 - y0) > 1:
-                # if the next square is not adjacent, then we add a connecting path
-                ax, ay = self._closest_corner((x0, y0), (x1, y1), clockwise=self.clockwise)
-                bx, by = self._closest_corner((x1, y1), (x0, y0), clockwise=not self.clockwise)
-                direc, orient = _get_direc_orient((x0, y0), (ax, ay))
-                if first_vector:
-                    self.vectors.append(ChessPathVector((ax, ay), direc, orient))
-                    first_vector = False
-                else:
-                    self.vectors.append(ChessPathVector((x0, y0), direc, orient))
-                    # self.vectors.append(ChessPathVector((ax, ay), direc, orient))
-                connecting_vectors = self._connecting_vectors((ax, ay), (bx, by))
-                self.vectors.extend(connecting_vectors)
-                x0, y0 = bx, by
-                direc, orient = _get_direc_orient((bx, by), (x1, y1))
-                self.vectors.append(ChessPathVector((bx, by), direc, orient))
-            else:
-                direc, orient = _get_direc_orient((x0, y0), (x1, y1))
-                if first_vector:
-                    first_vector = False
-                else:
-                    self.vectors.append(ChessPathVector((x0, y0), direc, orient))
-                self.vectors.append(ChessPathVector(((x0 + x1) / 2, (y0 + y1) / 2), direc, orient))
-            
-            # add last vector: turn 90 degrees to the right
-            last_direc = Direction((direc - 2) % 4)
-            if direc == Direction.H or direc == Direction.D:
-                last_orient = not orient
-            else:
-                last_orient = orient
-            last_vec = ChessPathVector((x1, y1), last_direc, last_orient)
-            last_vec.set_shift(self.shrinkB)
-            self.vectors.append(last_vec)
+            self._get_last_vec((x1, y1), *current_direction)
         else:
             ax, ay = self._closest_corner((x0, y0), self.junction)
-            direc, orient = _get_direc_orient((x0, y0), (ax, ay))
-            if first_vector:
-                self.vectors.append(ChessPathVector((ax, ay), direc, orient))
+            slope, orient = _get_slope_orient((x0, y0), (ax, ay))
+            if current_vec is None:
+                self._get_first_vec((x0, y0), slope, orient)
+                current_vec = ChessPathVector((ax, ay), slope, orient)
+                self.vectors.append(current_vec)
+            elif (slope, orient) != current_direction:
+                current_vec = ChessPathVector((x0, y0), slope, orient)
+                self.vectors.append(current_vec)
+                anchors[*pos_to_idx(x0, y0), slope].append(current_vec)
             else:
-                self.vectors.append(ChessPathVector((x0, y0), direc, orient))
-                self.vectors.append(ChessPathVector((ax, ay), direc, orient))
-            
-            connecting_vectors = self._connecting_vectors((ax, ay), self.junction)
+                anchors[*pos_to_idx(x0, y0), slope].append(current_vec)
+            anchors[*pos_to_idx(ax, ay), slope].append(current_vec)
+            connecting_vectors = self._connecting_vectors((ax, ay), self.junction, anchors)
             self.vectors.extend(connecting_vectors)
-        
-        # Add first vector so that the first turn is 90 degrees
-        direc, orient = self.vectors[0].direc, self.vectors[0].orient
-        first_direc = Direction((direc + 2) % 4)
-        if direc == Direction.H or direc == Direction.D:
-            first_orient = orient
-        else:
-            first_orient = not orient
-        x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
-        first_vec = ChessPathVector((x0, y0), first_direc, first_orient)
-        first_vec.set_shift(self.shrinkA)
-        self.vectors = [first_vec] + self.vectors
-        # print("chess path", self.chess_path, vectors)
+        # print("chess path", self.chess_path, self.vectors)
         return self.vectors
     
-    def _connecting_vectors(self, start, end):
+    def _connecting_vectors(self, start, end, anchors):
         """
         Experimental; like `_connecting_vertices` but with Vectors.
         """
@@ -523,61 +586,74 @@ class ChessPathArtist:
         second_part = []
         if in_horiz_edge:
             y_first = True
-            for k in range(0, int(by - ay + y_sign * .5), y_sign):
-                first_part.append(ChessPathVector((ax, ay + k), Direction.V, y_sign > 0))
-                first_part.append(ChessPathVector((ax, ay + k + y_sign * .5), Direction.V, y_sign > 0))
-            for k in range(0, int(bx - ax), x_sign):
-                second_part.append(ChessPathVector((ax + k, by), Direction.H, x_sign > 0))
-                second_part.append(ChessPathVector((ax + k + x_sign * .5, by), Direction.H, x_sign > 0))
-            second_part.append(ChessPathVector((bx - x_sign * .5, by), Direction.H, x_sign > 0))
         elif in_vert_edge:
             y_first = False
-            for k in range(0, int(bx - ax + x_sign * .5), x_sign):
-                first_part.append(ChessPathVector((ax + k, ay), Direction.H, x_sign > 0))
-                first_part.append(ChessPathVector((ax + k + x_sign * .5, ay), Direction.H, x_sign > 0))
-            for k in range(0, int(by - ay), y_sign):
-                second_part.append(ChessPathVector((bx, ay + k), Direction.V, y_sign > 0))
-                second_part.append(ChessPathVector((bx, ay + k + y_sign * .5), Direction.V, y_sign > 0))
-            second_part.append(ChessPathVector((bx, by - y_sign * .5), Direction.V, y_sign > 0))
         elif (self.clockwise and x_sign == y_sign) or (not self.clockwise and x_sign != y_sign):
             y_first = True
-            y_first = True
-            for k in range(0, int(by - ay + y_sign * .5), y_sign):
-                first_part.append(ChessPathVector((ax, ay + k), Direction.V, y_sign > 0))
-                first_part.append(ChessPathVector((ax, ay + k + y_sign * .5), Direction.V, y_sign > 0))
-            for k in range(0, int(bx - ax + x_sign * .5), x_sign):
-                second_part.append(ChessPathVector((ax + k, by), Direction.H, x_sign > 0))
-                second_part.append(ChessPathVector((ax + k + x_sign * .5, by), Direction.H, x_sign > 0))
         else:
             y_first = False
-            for k in range(0, int(bx - ax + x_sign * .5), x_sign):
-                first_part.append(ChessPathVector((ax + k, ay), Direction.H, x_sign > 0))
-                first_part.append(ChessPathVector((ax + k + x_sign * .5, ay), Direction.H, x_sign > 0))
-            for k in range(0, int(by - ay + y_sign * .5), y_sign):
-                second_part.append(ChessPathVector((bx, ay + k), Direction.V, y_sign > 0))
-                second_part.append(ChessPathVector((bx, ay + k + y_sign * .5), Direction.V, y_sign > 0))
         
-        if first_part and second_part:
-            vectors = first_part
-            ### Not working like I wanted...
-            # if y_first:
-            #     vectors.append(ChessPathVector((ax, by), Direction.D if x_sign == y_sign else Direction.A, x_sign > 0))
-            # else:
-            #     vectors.append(ChessPathVector((bx, ay), Direction.D if x_sign == y_sign else Direction.A, x_sign > 0))
-            vectors.extend(second_part)
+        ret = []
+        if y_first:
+            if ay != by:
+                current_vec = ChessPathVector((ax, ay), Slope.V, y_sign > 0)
+                ret.append(current_vec)
+                for y in np.arange(ay, by, y_sign * .5):
+                    anchors[*pos_to_idx(ax, y), Slope.V].append(current_vec)
+            if ax != bx:
+                current_vec = ChessPathVector((ax, by), Slope.H, x_sign > 0)
+                ret.append(current_vec)
+                for x in np.arange(ax, bx, x_sign * .5):
+                    anchors[*pos_to_idx(x, by), Slope.H].append(current_vec)
         else:
-            vectors = first_part + second_part
-        # print("connecting vectors", (ax, ay), (bx, by), in_horiz_edge, in_vert_edge, vectors)
-        return vectors
+            if ax != bx:
+                current_vec = ChessPathVector((ax, ay), Slope.H, x_sign > 0)
+                ret.append(current_vec)
+                for x in np.arange(ax, bx, x_sign * .5):
+                    anchors[*pos_to_idx(x, ay), Slope.H].append(current_vec)
+            if ay != by:
+                current_vec = ChessPathVector((bx, ay), Slope.V, y_sign > 0)
+                ret.append(current_vec)
+                for y in np.arange(ay, by, y_sign * .5):
+                    anchors[*pos_to_idx(bx, y), Slope.V].append(current_vec)
+                        
+        if len(ret) >= 2:
+            corner = (ax, by) if y_first else (bx, ay)
+            corner_slope = Slope.D if x_sign == y_sign else Slope.A
+            corner_vec = ChessPathVector(corner, corner_slope, x_sign > 0, bias=x_sign * (2 if y_first else -2))
+            anchors[*pos_to_idx(*corner), corner_slope].append(corner_vec)
+            ret.insert(1, corner_vec)
+            ret[0].set_check_more(1)
+        # print("connecting vectors", (ax, ay), (bx, by), in_horiz_edge, in_vert_edge, ret)
+        return ret
+    
+    def _get_first_vec(self, pos, slope, orient):
+        first_slope = Slope((slope + 2) % 4)
+        if slope == Slope.H or slope == Slope.D:
+            first_orient = orient
+        else:
+            first_orient = not orient
+        x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
+        self.first_vec = ChessPathVector(pos, first_slope, first_orient)
+        self.first_vec.set_shift(self.shrinkA)
+    
+    def _get_last_vec(self, pos, slope, orient):
+        last_slope = Slope((slope - 2) % 4)
+        if slope == Slope.H or slope == Slope.D:
+            last_orient = not orient
+        else:
+            last_orient = orient
+        self.last_vec = ChessPathVector(pos, last_slope, last_orient)
+        self.last_vec.set_shift(self.shrinkB)
 
-def _get_direc_orient(v0, v1):
+def _get_slope_orient(v0, v1):
     x0, y0 = v0
     x1, y1 = v1
     if y0 == y1:
-        return Direction.H, x1 > x0
+        return Slope.H, x1 > x0
     elif x0 == x1:
-        return Direction.V, y1 > y0
+        return Slope.V, y1 > y0
     elif x1 - x0 == y1 - y0:
-        return Direction.D, y1 > y0
+        return Slope.D, y1 > y0
     elif x1 - x0 == y0 - y1:
-        return Direction.A, y1 > y0
+        return Slope.A, y1 > y0

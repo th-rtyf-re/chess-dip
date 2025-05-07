@@ -113,17 +113,18 @@ class OrderInterface:
         """
         Experimental; recompute paths using non-overlapping vectors.
         """
-        import warnings
-        warnings.warn("Recomputing paths is an experimental feature that will probably change in the future.")
+        # import warnings
+        # warnings.warn("Recomputing paths is an experimental feature that will probably change in the future.")
         
         CPAM = ChessPathArtistManager(self.visualizer)
         
-        items = [(order, artist) for order, artist in self.artists.items() if not isinstance(order, HoldOrder | BuildOrder | DisbandOrder | ConvoyOrder)]
+        items = [(order, artist) for order, artist in self.artists.items() if (not isinstance(order, HoldOrder | BuildOrder | DisbandOrder | ConvoyOrder)) and order.chess_path.valid]
         
         vertices_dict = {}
         
         for order, artist in items:
             CPAM.add_path(artist.path_artist)
+        CPAM.shift_vectors()
         # # Adjust supports
         # for order, artist in items:
         #     if isinstance(order, SupportMoveOrder):
@@ -142,12 +143,11 @@ class OrderInterface:
                 square = order.get_landing_square()
                 supported_order = order.get_supported_order()
                 convoyed_order = supported_order.get_convoyed_order()
-                convoy_vertex = None
-                for vector in self.artists[convoyed_order].path_artist.vectors:
-                    if (vector.pos[0], vector.pos[1]) == (square.file, square.rank):
-                        convoy_vertex = vector.real_pos
+                
+                convoy_vertex = CPAM.get_real_position_on_square(self.artists[convoyed_order].path_artist, square)
                 other_vertices = vertices_dict[convoyed_order]
-                last_vertices = CPAM.get_intersection(artist.path_artist, other_vertices, ignore_last=True, default=convoy_vertex)
+                last_vertices = CPAM.get_intersection(artist.path_artist, other_vertices, default=convoy_vertex)
+                # print("convoy intersection", last_vertices)
                 artist.path_artist.junction = last_vertices[-1]
                 # manually adjust things
                 vertices_dict[order] = vertices_dict[order][:-1] + last_vertices
