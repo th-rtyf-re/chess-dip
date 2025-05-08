@@ -26,6 +26,7 @@ class Power:
     """
     def __init__(self, name, palette, side, d_king=False):
         self.name = name
+        self.palette = palette
         if side == Side.WHITE:
             self.piece_color = (palette.white, palette.neutral) # tuple: fc, highlight
         elif side == Side.BLACK:

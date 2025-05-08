@@ -55,7 +55,7 @@ class GameManager:
         
         self.year = 1
         self.phase = Phase.SPRING
-        self.set_title()
+        self.set_phase()
     
     def clear_board(self):
         self.board.clear()
@@ -141,10 +141,10 @@ class GameManager:
         for order in disband_orders:
             self.order_manager.add(order)
     
-    def set_title(self):
-        phase_str = ["Winter", "Spring", "Fall"][self.phase]
+    def set_phase(self):
+        phase_str = "WSF"[self.phase]
         year_str = str(self.year) if self.year >= 9 else f"0{self.year}"
-        self.visualizer.set_title(f"{phase_str} {year_str}")
+        self.board.set_phase(f"{phase_str}{year_str}")
     
     def progress(self):
         self.board.clear_en_passant()
@@ -157,7 +157,7 @@ class GameManager:
         elif self.phase == Phase.WINTER:
             self.year += 1
         self.phase = Phase((self.phase + 1) % Phase.N_PHASES)
-        self.set_title()
+        self.set_phase()
     
     def update_sc_ownership(self):
         self.board.update_sc_ownership()

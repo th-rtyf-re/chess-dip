@@ -108,3 +108,6 @@ class BoardInterface:
     
     def can_en_passant(self, piece, square):
         return (piece, square) in self.en_passant
+    
+    def set_phase(self, phase_str):
+        self.board_artist.set_phase(phase_str)
