@@ -1,3 +1,11 @@
+Except where otherwise stated, this code is shared under the GPLv3
+license. See the license document below. The following parts are
+licensed differently:
+- [Figtree](https://github.com/erikdkennedy/figtree/tree/master), found
+  in the directory `chessdip/interface/fonts/Figtree` is licensed under
+  the SIL Open Font License, Version 1.1. See
+  `chessdip/interface/fonts/Figtree/OFL.txt` for more information.
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
