@@ -103,7 +103,6 @@ class OrderArtist:
         path = Path(vertices, [Path.MOVETO] + [Path.LINETO] * (len(vertices) - 1))
         for patch in self.patches:
             patch.set_path(path)
-        # do something for support patches as well...
     
     def update_support_patch(self, support_artist):
         for patch in self.support_patches[support_artist]:
@@ -259,9 +258,8 @@ class SupportConvoyOrderArtist(SupportOrderArtist):
     def __init__(self, order, supported_artist, global_kwargs):
         super().__init__(order, supported_artist, global_kwargs)
         
-        # junction = (self.order.get_landing_square().file, self.order.get_landing_square().rank)
-        # self.path_artist = ChessPathArtist(self.order.chess_path, shrinkA=self.shrinkA, junction=junction)
-        self.path_artist = ChessPathArtist(self.order.chess_path, shrinkA=self.shrinkA)
+        junction = (float(self.order.get_landing_square().file), float(self.order.get_landing_square().rank))
+        self.path_artist = ChessPathArtist(self.order.chess_path, shrinkA=self.shrinkA, junction=junction)
         path = self.path_artist.compute_path()
         self.make_path_patches(path, path_type="support")
         self.set_virtual(order.virtual)

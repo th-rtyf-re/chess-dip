@@ -110,34 +110,20 @@ class OrderInterface:
             self.set_success(convoy_order, success)
     
     def recompute_paths(self):
-        """
-        Experimental; recompute paths using non-overlapping vectors.
-        """
-        # import warnings
-        # warnings.warn("Recomputing paths is an experimental feature that will probably change in the future.")
-        
         CPAM = ChessPathArtistManager(self.visualizer)
-        
         items = [(order, artist) for order, artist in self.artists.items() if (not isinstance(order, HoldOrder | BuildOrder | DisbandOrder | ConvoyOrder)) and order.chess_path.valid]
-        
-        vertices_dict = {}
-        
         for order, artist in items:
             CPAM.add_path(artist.path_artist)
+        
         CPAM.shift_vectors()
-        # # Adjust supports
-        # for order, artist in items:
-        #     if isinstance(order, SupportMoveOrder):
-        #         pass
-        # Compute most vertices
+        vertices_dict = {}
         for order, artist in items:
             vertices_dict[order] = CPAM.compute_vertices_from_vectors(artist.path_artist)
-        # Compute last vertex for supporting artists
         for order, artist in items:
+            # Compute last vertex for supporting artists
             if isinstance(order, SupportMoveOrder):
                 other_vertices = vertices_dict[order.get_supported_order()]
                 last_vertices = CPAM.get_intersection(artist.path_artist, other_vertices, default=other_vertices[-2])
-                artist.path_artist.junction = last_vertices[-1]
                 vertices_dict[order].extend(last_vertices)
             elif isinstance(order, SupportConvoyOrder):
                 square = order.get_landing_square()
@@ -147,11 +133,14 @@ class OrderInterface:
                 convoy_vertex = CPAM.get_real_position_on_square(self.artists[convoyed_order].path_artist, square)
                 other_vertices = vertices_dict[convoyed_order]
                 last_vertices = CPAM.get_intersection(artist.path_artist, other_vertices, default=convoy_vertex)
-                # print("convoy intersection", last_vertices)
-                artist.path_artist.junction = last_vertices[-1]
-                # manually adjust things
-                vertices_dict[order] = vertices_dict[order][:-1] + last_vertices
+                vertices_dict[order].extend(last_vertices)
+            
+            # Update vertices
             artist.update_vertices(vertices_dict[order])
+            
+            # Update support patches
             if isinstance(order, SupportOrder):
-                self.artists[order.get_supported_order()].update_support_patch(artist)
+                supported_order = order.get_supported_order()
+                self.artists[supported_order].update_support_patch(artist)
+                self.artists[supported_order].set_support_success(artist, order.get_success())
         self.visualizer.set_stale()

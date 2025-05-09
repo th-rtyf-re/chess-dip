@@ -147,17 +147,7 @@ class ChessPathArtistManager:
         self.n_fit = int(self.max_quiver_width / self.path_width)
     
     def add_path(self, path_artist):
-        vectors = path_artist.compute_vectors(self.anchors)
-        origin = np.asarray((path_artist.chess_path.start.file, path_artist.chess_path.start.rank))
-        anchored_vectors = vectors[1:-1] if path_artist.junction is None else vectors[1:]
-        for vector in anchored_vectors:
-            # bias is sin(angle) between the Vector and the direction of the path start
-            ref_vec = vector.unit if vector.orient else -vector.unit
-            if np.any(origin - vector.pos):
-                bias = np.cross(origin - vector.pos, ref_vec) / np.linalg.norm(origin - vector.pos)
-            else:
-                bias = 0.
-            vector.add_bias(bias)
+        path_artist.compute_vectors(self.anchors)
     
     def shift_vectors(self):
         quiver = VectorQuiver()
@@ -326,6 +316,7 @@ class ChessPathArtist:
         self.shrinkB = shrinkB
         self.clockwise = clockwise
         
+        self.origin = np.asarray((self.chess_path.start.file, self.chess_path.start.rank))
         self.first_vec = None
         self.last_vec = None
         self.vectors = []
@@ -361,7 +352,7 @@ class ChessPathArtist:
             x0, y0 = x1, y1
         
         # Landing square
-        if self.junction is None:
+        if self.junction is None or (self.junction[0].is_integer() and self.junction[1].is_integer()):
             x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
             if abs(x1 - x0) > 1 or abs(y1 - y0) > 1:
                 # if the next square is not adjacent, then we add a connecting path
@@ -477,11 +468,14 @@ class ChessPathArtist:
         """
         x0, y0 = self.chess_path.start.file, self.chess_path.start.rank
         self.vectors = []
+        self.first_vec, self.last_vec = None, None
         current_direction = (None, None)
         current_vec = None
         squares = [(square.file, square.rank) for square in self.chess_path.intermediate_squares]
         if self.junction is None:
             squares.append((self.chess_path.land.file, self.chess_path.land.rank))
+        elif self.junction[0].is_integer() and self.junction[1].is_integer():
+            squares.append(self.junction)
         
         for x1, y1 in squares:
             if abs(x1 - x0) > 1 or abs(y1 - y0) > 1:
@@ -493,7 +487,7 @@ class ChessPathArtist:
                 self.vectors.extend(connecting_vectors)
                 
                 slope, orient = _get_slope_orient((bx, by), (x1, y1))
-                current_vec = ChessPathVector((bx, by), slope, orient)
+                current_vec = self._make_biased_vector((bx, by), slope, orient)
                 current_direction = slope, orient
                 self.vectors.append(current_vec)
                 anchors[*pos_to_idx(bx, by), slope].append(current_vec)
@@ -506,6 +500,8 @@ class ChessPathArtist:
         if self.junction is None:
             x1, y1 = self.chess_path.land.file, self.chess_path.land.rank
             self._add_last_vec((x1, y1), *current_direction)
+        elif self.junction[0].is_integer() and self.junction[1].is_integer():
+            pass
         else:
             ax, ay = self._closest_corner((x0, y0), self.junction)
             self._aux_compute_vectors(current_vec, current_direction, (x0, y0), (ax, ay), anchors)
@@ -518,11 +514,11 @@ class ChessPathArtist:
         slope, orient = _get_slope_orient(v0, va)
         if current_vec is None:
             self._add_first_vec(v0, slope, orient)
-            current_vec = ChessPathVector(va, slope, orient)
+            current_vec = self._make_biased_vector(va, slope, orient)
             current_direction = slope, orient
             self.vectors.append(current_vec)
         elif (slope, orient) != current_direction: # should not happen
-            current_vec = ChessPathVector(v0, slope, orient)
+            current_vec = self._make_biased_vector(v0, slope, orient)
             current_direction = slope, orient
             self.vectors.append(current_vec)
             anchors[*pos_to_idx(*v0), slope].append(current_vec)
@@ -530,6 +526,17 @@ class ChessPathArtist:
             anchors[*pos_to_idx(*v0), slope].append(current_vec)
         anchors[*pos_to_idx(*va), slope].append(current_vec)
         return current_vec, current_direction
+    
+    def _make_biased_vector(self, *args, **kwargs):
+        # bias is sin(angle) between the Vector and the direction of the path start
+        vector = ChessPathVector(*args, **kwargs)
+        ref_vec = vector.unit if vector.orient else -vector.unit
+        if np.any(self.origin - vector.pos):
+            bias = np.cross(self.origin - vector.pos, ref_vec) / np.linalg.norm(self.origin - vector.pos)
+        else:
+            bias = 0.
+        vector.add_bias(bias)
+        return vector
     
     def _connecting_vectors(self, start, end, anchors):
         """
@@ -552,23 +559,23 @@ class ChessPathArtist:
         ret = []
         if y_first:
             if ay != by:
-                current_vec = ChessPathVector((ax, ay), Slope.V, y_sign > 0)
+                current_vec = self._make_biased_vector((ax, ay), Slope.V, y_sign > 0)
                 ret.append(current_vec)
                 for y in np.arange(ay, by, y_sign * .5):
                     anchors[*pos_to_idx(ax, y), Slope.V].append(current_vec)
             if ax != bx:
-                current_vec = ChessPathVector((ax, by), Slope.H, x_sign > 0)
+                current_vec = self._make_biased_vector((ax, by), Slope.H, x_sign > 0)
                 ret.append(current_vec)
                 for x in np.arange(ax, bx, x_sign * .5):
                     anchors[*pos_to_idx(x, by), Slope.H].append(current_vec)
         else:
             if ax != bx:
-                current_vec = ChessPathVector((ax, ay), Slope.H, x_sign > 0)
+                current_vec = self._make_biased_vector((ax, ay), Slope.H, x_sign > 0)
                 ret.append(current_vec)
                 for x in np.arange(ax, bx, x_sign * .5):
                     anchors[*pos_to_idx(x, ay), Slope.H].append(current_vec)
             if ay != by:
-                current_vec = ChessPathVector((bx, ay), Slope.V, y_sign > 0)
+                current_vec = self._make_biased_vector((bx, ay), Slope.V, y_sign > 0)
                 ret.append(current_vec)
                 for y in np.arange(ay, by, y_sign * .5):
                     anchors[*pos_to_idx(bx, y), Slope.V].append(current_vec)
@@ -576,7 +583,7 @@ class ChessPathArtist:
         if len(ret) >= 2: # add corner Vector
             corner = (ax, by) if y_first else (bx, ay)
             corner_slope = Slope.D if x_sign == y_sign else Slope.A
-            corner_vec = ChessPathVector(corner, corner_slope, x_sign > 0, bias=x_sign * (2 if y_first else -2))
+            corner_vec = self._make_biased_vector(corner, corner_slope, x_sign > 0, bias=x_sign * (2 if y_first else -2))
             anchors[*pos_to_idx(*corner), corner_slope].append(corner_vec)
             ret.insert(1, corner_vec)
             ret[0].set_check_more(1)
