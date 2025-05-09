@@ -32,7 +32,7 @@ TEST_CASES = [
     "CDT11", "CDT12", "CDT13", "CDT14", "CDT15", "CDT16", "CDT17", "CDT18",
         "CDT19", "CDT20",
     "CDT21", "CDT22", "CDT23", "CDT24", "CDT25", "CDT26",
-    "CDV1", "CDV1A", "CDV1B", "CDV1C", "CDV1D", "CDV2", "CDV3"
+    "CDV1", "CDV1A", "CDV1B", "CDV1C", "CDV1D", "CDV2", "CDV3", "CDV4"
 ]
 
 # 6. TEST CASES
@@ -1158,6 +1158,13 @@ def test_CDV3():
     GM.setup_pieces(italy, ["Ke1", "Bf1", "Ng1", "Rh1", "Pe2", "Pf2", "Pg2", "Ph2"])
     GM.setup_pieces(france, ["Ke8", "Bf8", "Ng8", "Rh8", "Pe7", "Pf7", "Pg7", "Ph7"])
     GM.setup_pieces(scandinavia, ["Kd8", "Bc8", "Nb8", "Ra8", "Pd7", "Pc7", "Pb7", "Pa7"])
+
+# CD.V.4. VISUAL TEST, SUPPORT OVERLAPS
+def test_CDV4():
+    GM.setup_pieces(england, ["Kd3", "Nc3", "Nd4"])
+    GM.setup_pieces(italy, ["Ne1"])
+    GM.process_orders(england, ["Kd3 S Nc3 e2", "Nc3 e2"])
+    GM.process_orders(italy, ["Ne1 d3"])
 
 def test_cases(verbose=False, sandbox=False):
     """
