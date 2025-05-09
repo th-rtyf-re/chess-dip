@@ -251,7 +251,10 @@ If the move order is part of a [head-to-head battle](#head-to-head-battle) and t
 Otherwise, the prevent strength is 1 plus the number of successful support-move orders.
 
 If the [path](#path) of a convoy order fails, then the prevent strength of the convoy order is 0.  
-Otherwise, its prevent strength is the number of successful support-convoy orders.
+Otherwise, its prevent strength is:
+
+- ½ if there are no successful support-convoy orders (this is to allow the convoy to succeed over convoys with a failed path);
+- the number of successful support-convoy orders otherwise.
 
 ## Order success
 ### Convoy orders

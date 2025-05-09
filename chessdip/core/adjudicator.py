@@ -294,7 +294,7 @@ class Adjudicator:
         if not self._check_path(order, optimistic):
             return 0
         elif isinstance(order, ConvoyOrder):
-            return self._get_support_strength(order, optimistic)
+            return max(0.5, self._get_support_strength(order, optimistic))
         elif (order_at_landing is not None
             and isinstance(order_at_landing, MoveOrder)
             and order_at_landing.get_landing_square() == order.get_starting_square()
