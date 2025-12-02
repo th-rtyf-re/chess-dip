@@ -1,3 +1,7 @@
+* [Appetizer](#appetizer)
+* [Main course: the rules](#main-course-the-rules)
+* [Dessert: an axiomatic approach](#dessert-an-axiomatic-approach)
+
 # Appetizer
 
 **Chess Dip** is Diplomacy played on a chess board. The mechanics are a balance of Diplomacy rules, chess moves, and interesting strategy. Each side of the board is divided into two powers, named after a classic chess opening or defense. Units are all possible chess pieces except for the queen. Pieces move and support following their chess moves: this includes [castling](#castling) and [en passant](#en-passant)\! Also, dislodged pieces are automatically disbanded.
@@ -20,7 +24,7 @@ There are four powers: England (quartz), Italy (opal), France (obsidian), and Sc
 
 ### Units
 
-The units are called pieces. There are pawns, bishops, knights, rooks, and kings. Note that there are no queens.
+The units are called **pieces**. There are pawns, bishops, knights, rooks, and kings. Note that there are no queens.
 
 ### Starting positions
 
@@ -49,7 +53,7 @@ Dislodged pieces are automatically disbanded. We slightly modify the definition 
 
 ### Builds
 
-Powers may build on any home center that they own. Home centers are the ones on the first two ranks on their side of the board: ranks `1` and `2` for England and Italy, and ranks `7` and `8` for France and Scandinavia. Some home centers can change ownership; this will be explained when pawns are introduced.
+Powers may build on any home center that they own. At the beginning of the game, a power's home centers are the ones on the first two ranks on their side of the board: ranks `1` and `2` for England and Italy, and ranks `7` and `8` for France and Scandinavia. Some home centers can change ownership; this will be explained when pawns are introduced.
 
 ## Bishops and rooks: introducing multiple-square orders
 
