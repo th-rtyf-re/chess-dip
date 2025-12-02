@@ -61,12 +61,12 @@ Bishops and rooks move as they do in chess; their supports follow the same paths
 
 ### Multiple-square orders
 
-A multiple-square order automatically issues a **convoy** order on each of its intermediate squares: such an order looks like
+If the path of an order has intermediate squares, then the order is a **multiple-square order**. Such an order automatically issues a **convoy** order on each of its intermediate squares: such an order looks like
 
 > `e2 C f1 - c4` or  
 > `e2 C f1 S c4`,
 
-where in the second example `c4` is the *landing square* of the support order from `f1`. Note that convoys are ordered to squares, not pieces. Also note that a square may receive multiple convoy orders. Powers may not explicitly order such moves, but they may support them with a new type of support, the **support-convoy**. Such an order looks like
+where in the second example `c4` is the landing square of the *supporting* order from `f1` (not the *supported* order, which is omitted). Note that convoys are ordered to squares, not pieces. Also note that a square may receive multiple convoy orders. Powers may not explicitly order such moves, but they may support them with a new type of support, the **support-convoy**. Such an order looks like
 
 > `Ke1 S e2 C f1 - c4`.
 
@@ -76,7 +76,7 @@ When adjudicating, multiple-square orders are treated like standard orders at th
 
 ### Castling
 
-There is one exception to these multiple-square orders: castling. Castling is only allowed for a king and rook on the first rank on the power’s side, with the king on the square where the power originally had a king (file `d` or `e`), and the rook in the corner. For England and Scandinavia, the moves are mirrored to what they would be on a standard chess board (ie king’s side and queen’s side castling are flipped). The two pieces must also have not successfully moved before: for instance, one may castle right after building a king and a rook. The king’s move has no intermediate square but the rook move does: the squares between its starting and landing squares except for the one where the king lands. Castling pieces have attack and defend strength 0, but succeed against empty squares. In other words, they cannot dislodge a piece: this is an example of a travel order, a new type of order that will be detailed in the pawn section. Castling is ordered with a special order:
+There is one exception to these multiple-square orders: castling. Castling is only allowed for a king and rook on the first rank on the power’s side, with the king on the square where the power originally had a king (file `d` or `e`), and the rook in the corner. For England and Scandinavia, the moves are mirrored to what they would be on a standard chess board (ie king’s side and queen’s side castling are flipped). The two pieces must also have not successfully moved before: for instance, one may castle right after building a king and a rook. The king’s move has no intermediate square but the rook move does: the squares between its starting and landing squares except for the one where the king lands. Castling pieces have attack and defend strength 0, but succeed against empty squares. In other words, they cannot dislodge a piece: this is an example of a *travel order*, a new type of order that will be detailed in the pawn section. Castling is ordered with a special order:
 
 > `O-O` or `O-O-O`,
 
@@ -84,7 +84,7 @@ corresponding to castling where the rook moves two or three squares, respectivel
 
 ## Pawns: all the exceptions
 
-Pawns travel forwards but attack diagonally. When on the first two ranks of their side, they can also advance two blocks, with an intermediate square: this rule is taken from horde chess.
+Pawns travel forwards but attack diagonally. When on the first two ranks of their side, they can also advance two blocks, with an intermediate square: this rule is taken from [horde chess](https://www.chess.com/terms/horde-chess).
 
 ### Travel and attack orders
 
@@ -103,7 +103,7 @@ An attacking pawn only moves if it successfully dislodges a piece. So a pawn att
 Pawns can also attack en passant, not only against pawns moving in the opposite direction, but also opponent pawns moving in the same direction. For en passant to be possible, the following conditions must hold:
 
 - There must be a pawn that moves forwards two squares on the previous phase: call this the passed pawn.  
-- An opponent pawn can currently attack the intermediate square of the two-square move.
+- A different power's pawn can currently attack the intermediate square of the two-square move.
 
 For example, consider the following orders from the previous phase:
 
